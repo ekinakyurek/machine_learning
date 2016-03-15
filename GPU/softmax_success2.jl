@@ -26,7 +26,7 @@ function main(args=ARGS)
 
     for epoch=1:nepochs
         train(model, dtrn, softloss)
-        @printf("epoch:%d softloss:%g/%g zeroone:%g/%g\n",
+        @printf("%d %g %g %g %g\n",
                 epoch,
                 test(model, dtrn, softloss),
                 test(model, dtst, softloss),
