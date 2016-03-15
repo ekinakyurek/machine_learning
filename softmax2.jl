@@ -1,10 +1,10 @@
 ###  Username: eakyurek
 
 isdefined(:MNIST) || include(Pkg.dir("Knet/examples/mnist.jl"))
-using Knet, Gadfly
+using Knet
 
 @knet function mnist_softmax(x)
-     y1 = wbf(x; out=30, f=:relu)
+    y1 = wbf(x; out=30, f=:relu)
     return wbf(y1; f=:soft, out=10)
 end
 
@@ -64,15 +64,17 @@ function main()
 			zeroerrortst[epoch] = test(model,dtst,zeroone)
 	    train(model, dtrn, softloss)
 
-	    @printf("epoch:%d softloss:%g/%g zeroone:%g/%g accuracy:%g/%g\n",
+	    @printf("%d\t%g\t%g\t%g\t%g\n",
 							epoch,
 	            test(model, dtrn, softloss),
 	            test(model, dtst, softloss),
 	            test(model, dtrn, zeroone),
-	            test(model, dtst, zeroone),
-							accuracy(MNIST.ytrn,forw(model,MNIST.xtrn)),
-							accuracy(MNIST.ytst,forw(model,MNIST.xtst))
+	            test(model, dtst, zeroone)
+							#accuracy(MNIST.ytrn,forw(model,MNIST.xtrn)),
+							#accuracy(MNIST.ytst,forw(model,MNIST.xtst))
 							)
 	end
 
 end
+
+main()
