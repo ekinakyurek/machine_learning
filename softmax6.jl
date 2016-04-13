@@ -8,25 +8,40 @@ module MNIST4D
 using Main, Knet, ArgParse
 
 
+
 @knet function mnist_softmax(x0)
-  x1 = cbfp(x0; out=10, f=:relu, cwindow=5, pwindow=2)
-      x2 = cbfp(x1; out=15, f=:tanh, cwindow=5, pwindow=2)
-      x3 = wbf(x2; out=20, f=:relu)
+      x1 = cbfp(x0; out=16, f=:relu, cwindow=5, pwindow=2)
+      x2 = cbfp(x1; out=14, f=:tanh, cwindow=5, pwindow=2)
+      x3 = wbf(x2; out=13, f=:tanh)
       return wbf(x3; out=10, f=:soft)
 end
 
 function main(args=ARGS)
     batchsize = 100
-    nepochs = 100
+    nepochs = 400
     global dtrn = minibatch(MNIST.xtrn, MNIST.ytrn, batchsize)
     global dtst = minibatch(MNIST.xtst, MNIST.ytst, batchsize)
 
     global model = compile(:mnist_softmax)
-    setp(model; lr=0.15)
+    setp(model; lr=0.22)
 
     for epoch=1:nepochs
-        train(model, dtrn, softloss)
-        @printf("%d %g %g %g %g\n",
+        if epoch == 200
+               setp(model;lr=0.20)
+        end
+	      if epoch == 250
+               setp(model;lr=0.19)
+        end
+	      if epoch == 300
+               setp(model;lr=0.18)
+        end
+	      if epoch == 350
+               setp(model;lr=0.17)
+        end
+
+
+	      train(model, dtrn, softloss)
+        @printf("%d\t%g\t%g\t%g\t%g\n",
                 epoch,
                 test(model, dtrn, softloss),
                 test(model, dtst, softloss),
@@ -35,8 +50,12 @@ function main(args=ARGS)
                 #accuracy(MNIST.ytrn,forw(model,MNIST.xtrn)),
                 #accuracy(MNIST.ytst,forw(model,MNIST.xtst))
                 )
+        if test(model, dtrn, zeroone)==0.0
+              break
+         end
     end
 end
+
 
 function train(f, data, loss; losscnt=nothing, maxnorm=nothing)
     for (x,ygold) in data

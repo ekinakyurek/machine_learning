@@ -216,7 +216,7 @@ function grad_check(W, b, X, Y)
 			b[k] -= 2epsilon;
 			cost2,_,_ = softmax_cost(W,b,X,Y)
 			gb[k] = (cost1-cost2)/2epsilon
-			b[k] += 2epsilon;
+			b[k] += epsilon;
 		end
 		#end of step 4
 
@@ -226,7 +226,7 @@ function grad_check(W, b, X, Y)
 	cost4,gradW,gradB = softmax_cost(W, b, X, Y)
 	gw, gb = numeric_gradient()
 
-	diff = sqrt(mean((gradW - gw) .^ 2) + mean((gradB - gb) .^ 2))
+	diff = sqrt(sum((gradW - gw) .^ 2) + sum((gradB - gb) .^ 2))
 	println("Diff: $diff")
 	if diff < 1e-5
 		println("Gradient Checking Passed")
