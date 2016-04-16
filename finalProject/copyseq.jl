@@ -48,23 +48,27 @@ function main(args=ARGS)
     perp = zeros(length(data))
     (maxnorm,losscnt) = fast ? (nothing,nothing) : (zeros(2),zeros(2))
     t0 = time_ns()
-    println("epoch  secs    ptrain  ptest.. wnorm  gnorm")
-    myprint(a...)=(for x in a; @printf("%-6g ",x); end; println(); flush(STDOUT))
-    for epoch=1:epochs
-        fast || (fill!(maxnorm,0); fill!(losscnt,0))
-        train(model, data[1], softloss; gclip=gclip, maxnorm=maxnorm, losscnt=losscnt, lossreport=lossreport)
-        fast || (perp[1] = exp(losscnt[1]/losscnt[2]))
-        for d=2:length(data)
-            loss = test(model, data[d], softloss)
-            perp[d] = exp(loss)
-        end
-        myprint(epoch, (time_ns()-t0)/1e9, perp..., (fast ? [] : maxnorm)...)
-        gcheck > 0 && gradcheck(model,
-                                f->(train(f,data[1],softloss;losscnt=fill!(losscnt,0),gcheck=true);losscnt[1]),
-                                f->(test(f,data[1],softloss;losscnt=fill!(losscnt,0),gcheck=true);losscnt[1]);
-                                gcheck=gcheck)
+    data = data[1]
+    for (x,ygold,mask) in data 
+      print(x)
     end
-    return (fast ? (perp...) :  (perp..., maxnorm...))
+    # println("epoch  secs    ptrain  ptest.. wnorm  gnorm")
+    # myprint(a...)=(for x in a; @printf("%-6g ",x); end; println(); flush(STDOUT))
+    # for epoch=1:epochs
+    #     fast || (fill!(maxnorm,0); fill!(losscnt,0))
+    #     train(model, data[1], softloss; gclip=gclip, maxnorm=maxnorm, losscnt=losscnt, lossreport=lossreport)
+    #     fast || (perp[1] = exp(losscnt[1]/losscnt[2]))
+    #     for d=2:length(data)
+    #         loss = test(model, data[d], softloss)
+    #         perp[d] = exp(loss)
+    #     end
+    #     myprint(epoch, (time_ns()-t0)/1e9, perp..., (fast ? [] : maxnorm)...)
+    #     gcheck > 0 && gradcheck(model,
+    #                             f->(train(f,data[1],softloss;losscnt=fill!(losscnt,0),gcheck=true);losscnt[1]),
+    #                             f->(test(f,data[1],softloss;losscnt=fill!(losscnt,0),gcheck=true);losscnt[1]);
+    #                             gcheck=gcheck)
+    # end
+    # return (fast ? (perp...) :  (perp..., maxnorm...))
 end
 
 # This copies lstm exactly for replicatability:
@@ -173,7 +177,7 @@ end
 function s2s_encode(m, x; trn=false, o...)
     # forw(m.encoder, x; trn=trn, seq=true, o...)
     (trn?sforw:forw)(m, x; decoding=false)
-end    
+end
 
 function s2s_decode(m, x, ygold, mask, nwords, loss; trn=false, ystack=nothing, losscnt=nothing, o...)
     # ypred = forw(m.decoder, x; trn=trn, seq=true, o...)
