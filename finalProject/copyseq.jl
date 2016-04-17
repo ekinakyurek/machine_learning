@@ -1,27 +1,25 @@
 using Knet
-module Memorization
+module CopySeq
 using Main, Knet, ArgParse
 using Knet: copysync!
-include("Data.jl")
 @useifgpu CUDArt
 @useifgpu CUSPARSE
-global x;
-global y;
+
 function main(args=ARGS)
     info("Learning to copy sequences to test the S2S model.")
     s = ArgParseSettings()
     @add_arg_table s begin
-        ("datafiles"; nargs='+'; required=false; help="First file used for training")
+        ("datafiles"; nargs='+'; required=true; help="First file used for training")
         ("--dictfile"; help="Dictionary file, first datafile used if not specified")
-        ("--epochs"; arg_type=Int; default=100)
-        ("--hidden"; arg_type=Int; default=400)
-        ("--batchsize"; arg_type=Int; default=100)
-        ("--lossreport"; arg_type=Int; default=1)
-        ("--gclip"; arg_type=Float64; default=5.0)
-        ("--lr"; arg_type=Float64; default=0.5)
+        ("--epochs"; arg_type=Int; default=1)
+        ("--hidden"; arg_type=Int; default=100)
+        ("--batchsize"; arg_type=Int; default=128)
+        ("--lossreport"; arg_type=Int; default=0)
+        ("--gclip"; arg_type=Float64; default=10.0)
+        ("--lr"; arg_type=Float64; default=2.0)
         ("--fbias"; arg_type=Float64; default=0.0)
-        ("--ftype"; default="Float64")
-        ("--winit"; default="Uniform(-0.08,0.08)")
+        ("--ftype"; default="Float32")
+        ("--winit"; default="Gaussian(0,0.01)")
         ("--dense"; action=:store_true)
         ("--fast"; help="skip norm and loss calculations."; action=:store_true)
         ("--gcheck"; arg_type=Int; default=0)
@@ -33,85 +31,110 @@ function main(args=ARGS)
     println(opts)
     for (k,v) in opts; @eval ($(symbol(k))=$v); end
     seed > 0 && setseed(seed)
-
     dict = (dictfile == nothing ? datafiles[1] : dictfile)
-     readData("Input.txt", "Input.txt", "SourceDict", "SourceDict")
-    x = dataX
-    ygold = dataY
-    global model = compile(:rnn_model; fbias=fbias, numbers=length(inDict), nlayer = 2, out=hidden, winit=eval(parse(winit)))
+    global data = Any[]
+    for f in datafiles
+        push!(data, S2SData(f; batchsize=batchsize, ftype=eval(parse(ftype)), dense=dense, dict=dict))
+    end
+    vocab = maxtoken(data[1],2)
+    # global model = S2S(lstm; fbias=fbias, hidden=hidden, vocab=vocab, winit=eval(parse(winit)))
+    global model = compile(:copyseq; fbias=fbias, out=hidden, vocab=vocab, winit=eval(parse(winit)))
     setp(model; lr=lr)
+    if nosharing
+        set!(model, :forwoverwrite, false)
+        set!(model, :backoverwrite, false)
+    end
 
-    #
-    # if nosharing
-    #     set!(model, :forwoverwrite, false)
-    #     set!(model, :backoverwrite, false)
-    # end
-
-    perp = zeros(1)
+    perp = zeros(length(data))
     (maxnorm,losscnt) = fast ? (nothing,nothing) : (zeros(2),zeros(2))
     t0 = time_ns()
     println("epoch  secs    ptrain  ptest.. wnorm  gnorm")
     myprint(a...)=(for x in a; @printf("%-6g ",x); end; println(); flush(STDOUT))
     for epoch=1:epochs
-      fast || (fill!(maxnorm,0); fill!(losscnt,0))
-      train(model, softloss; gclip=gclip, maxnorm=maxnorm, losscnt=losscnt, lossreport=lossreport)
-      fast || (perp[1] = exp(losscnt[1]/losscnt[2]))
-      myprint(epoch, (time_ns()-t0)/1e9, perp..., (fast ? [] : maxnorm)...)
-      gcheck > 0 && gradcheck(model,
-                            f->(train(f,softloss;losscnt=fill!(losscnt,0),gcheck=true);losscnt[1]),
-                            f->(test(f,softloss;losscnt=fill!(losscnt,0),gcheck=true);losscnt[1]);
-                            gcheck=gcheck)
+        fast || (fill!(maxnorm,0); fill!(losscnt,0))
+        train(model, data[1], softloss; gclip=gclip, maxnorm=maxnorm, losscnt=losscnt, lossreport=lossreport)
+        fast || (perp[1] = exp(losscnt[1]/losscnt[2]))
+        for d=2:length(data)
+            loss = test(model, data[d], softloss)
+            perp[d] = exp(loss)
+        end
+        myprint(epoch, (time_ns()-t0)/1e9, perp..., (fast ? [] : maxnorm)...)
+        gcheck > 0 && gradcheck(model,
+                                f->(train(f,data[1],softloss;losscnt=fill!(losscnt,0),gcheck=true);losscnt[1]),
+                                f->(test(f,data[1],softloss;losscnt=fill!(losscnt,0),gcheck=true);losscnt[1]);
+                                gcheck=gcheck)
     end
     return (fast ? (perp...) :  (perp..., maxnorm...))
 end
 
-
-
-@knet function rnn_model(character; fbias=0, numbers=47, nlayer=2, o... )
-    if !decoding
-        h = lstm2(character; nlayer=nlayer,o...)
-    else
-        h = lstm2(character; nlayer=nlayer,o...)
-    end
-
-    if decoding
-        target = wdot(h; out=numbers)
-        return soft(target)
-    end
-end
-
-@knet function lstm2(x; nlayer=0, embedding=0, hidden=0, o...)
-    a = wdot(x; out=hidden, o...)
-    c = repeat(a; frepeat=:firstLayer, nrepeat=nlayer, o...)
-    return c
-end
-
-@knet function firstLayer(x; fbias= 0.08, o...)
-    input  = wbf3(x,h,cell; o..., f=:sigm, binit=Uniform(-fbias,fbias))
-    forget = wbf3(x,h,cell; o..., f=:sigm, binit=Uniform(-fbias,fbias))
-    newmem = wbf2(x,h; o..., f=:tanh, binit=Uniform(-fbias,fbias))
-    output = wbf3(x,h,cell; o..., f=:sigm, binit=Uniform(-fbias,fbias))
-    cell = input .* newmem + cell .* forget
-    h  = tanh(cell) .* output
-    return h
+# This copies lstm exactly for replicatability:
+@knet function copyseq(word; fbias=0, vocab=0,numbers=47, nlayer=2, o...)
+  if !decoding
+      x = wdot(word; o...)
+      input  = wbf3(x,h,h; o..., f=:sigm)
+      forget = wbf2(x,h; o..., f=:sigm, binit=Constant(fbias))
+      output = wbf2(x,h; o..., f=:sigm)
+      newmem = wbf2(x,h; o..., f=:tanh)
+  else
+      x = wdot(word; o...)
+      input  = wbf3(x,h,h; o..., f=:sigm)
+      forget = wbf2(x,h; o..., f=:sigm, binit=Constant(fbias))
+      output = wbf2(x,h; o..., f=:sigm)
+      newmem = wbf2(x,h; o..., f=:tanh)
+  end
+  cell = input .* newmem + cell .* forget
+  h  = tanh(cell) .* output
+  if decoding
+      tvec = wdot(h; out=vocab)
+      return soft(tvec)
+  end
 end
 
 @knet function wbf3(x1, x2, x3; f=:sigm, o...)
     y1 = wdot(x1; o...)
     y2 = wdot(x2; o...)
-    y3 = wdot(x3; o...)
+    y3 = wdot(x3, o...)
     x3 = add(y2,y1)
     x4 = add(x3,y3)
     y4 = bias(x4; o...)
     return f(y4; o...)
 end
-
-function train(m, loss; o...)
-    s2s_loop(m, loss; trn=true, ystack=Any[], o...)
+@knet function copyseq1(word; fbias=0, vocab=0, o...)
+    if decoding
+        x = wdot(word; o...)
+        input  = sigm(aff2(x,h; o...))
+        forget = sigm(aff2(x,h; o..., binit=Constant(fbias)))
+        output = sigm(aff2(x,h; o...))
+        newmem = tanh(aff2(x,h; o...))
+    else
+        x = wdot(word; o...)
+        input  = sigm(aff2(x,h; o...))
+        forget = sigm(aff2(x,h; o..., binit=Constant(fbias)))
+        output = sigm(aff2(x,h; o...))
+        newmem = tanh(aff2(x,h; o...))
+    end
+    c = input .* newmem + c .* forget
+    h  = tanh(c) .* output
+    if decoding
+        return soft(wdot(h; out=vocab))
+    end
 end
 
-function test(m, loss; losscnt=zeros(2), o...)
-    s2s_loop(m, loss; losscnt=losscnt, o...)
+@knet function aff2(x,y; out=0, o...)
+    a = par(; o..., dims=(out,0))
+    b = par(; o..., dims=(out,0))
+    c = par(; o..., dims=(0,))
+    # return a*x+b*y+c
+    xy = a*x+b*y
+    return c+xy
+end
+
+function train(m, data, loss; o...)
+    s2s_loop(m, data, loss; trn=true, ystack=Any[], o...)
+end
+
+function test(m, data, loss; losscnt=zeros(2), o...)
+    s2s_loop(m, data, loss; losscnt=losscnt, o...)
     losscnt[1]/losscnt[2]
 end
 
@@ -124,44 +147,36 @@ s2s_mask = nothing
 @gpu copytogpu{T}(y::CudaSparseMatrixCSC{T},x::SparseMatrixCSC{T})=(size(x)==size(y) ? copysync!(y,x) : copytogpu(nothing,x))
 
 
-function s2s_loop(m, loss; gcheck=false, o...)
+function s2s_loop(m, data, loss; gcheck=false, o...)
     global s2s_ygold, s2s_mask
     s2s_lossreport()
     decoding = false
     reset!(m)
-
-    for batchNo = 1:length(dataX)
-      mask = ones(Cuchar, batchsize)
-      for j=1:size(dataX[batchNo],2)
-
-        x = dataX[batchNo][:,:,j]
-        ygold = dataY[batchNo][:,:,j]
-
+    for (x,ygold,mask) in data
         nwords = (mask == nothing ? size(x,2) : sum(mask))
         # x,ygold,mask are cpu arrays; x gets copied to gpu by forw; we should do the other two here
         if ygold != nothing && gpu()
             ygold = s2s_ygold = copytogpu(s2s_ygold,ygold)
             mask != nothing && (mask = s2s_mask  = copytogpu(s2s_mask,mask)) # mask not used when ygold=nothing
         end
-        if decoding && ygold ==  zeros(length(outDict)) # the next sentence started
+        if decoding && ygold == nothing # the next sentence started
             gcheck && break
-            s2s_eos(m, loss; gcheck=gcheck, o...)
+            s2s_eos(m, data, loss; gcheck=gcheck, o...)
             reset!(m)
             decoding = false
         end
-        if !decoding && ygold != zeros(length(outDict)) # source ended, target sequence started
+        if !decoding && ygold != nothing # source ended, target sequence started
             # s2s_copyforw!(m)
             decoding = true
         end
-        if decoding && ygold != zeros(length(outDict)) # keep decoding target
+        if decoding && ygold != nothing # keep decoding target
             s2s_decode(m, x, ygold, mask, nwords, loss; o...)
         end
-        if !decoding && ygold == zeros(length(outDict)) # keep encoding source
+        if !decoding && ygold == nothing # keep encoding source
             s2s_encode(m, x; o...)
         end
-      end
     end
-    s2s_eos(m, loss; gcheck=gcheck, o...)
+    s2s_eos(m, data, loss; gcheck=gcheck, o...)
 end
 
 function s2s_encode(m, x; trn=false, o...)
@@ -184,7 +199,7 @@ function s2s_loss(m, ypred, ygold, mask, nwords, loss; losscnt=nothing, lossrepo
     lossreport > 0 && s2s_lossreport(losscnt,ycols,lossreport)
 end
 
-function s2s_eos(m, loss; trn=false, gcheck=false, ystack=nothing, maxnorm=nothing, gclip=0, o...)
+function s2s_eos(m, data, loss; trn=false, gcheck=false, ystack=nothing, maxnorm=nothing, gclip=0, o...)
     if trn
         s2s_bptt(m, ystack, loss; o...)
         g = (gclip > 0 || maxnorm!=nothing ? gnorm(m) : 0)

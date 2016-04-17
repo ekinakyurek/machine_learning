@@ -22,6 +22,8 @@ end
     forget = wbf3(x,h,cell; o..., f=:sigm, binit=Uniform(-fbias,fbias))
     newmem = wbf2(x,h; o..., f=:tanh, binit=Uniform(-fbias,fbias))
     cell = input .* newmem + cell .* forget
+    output = wbf3(x,h,cell; o..., f=:sigm, binit=Uniform(-fbias,fbias))
+
     h  = tanh(cell) .* output
     return h
 end

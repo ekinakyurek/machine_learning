@@ -23,7 +23,7 @@ function readData(input,output,inputDict,outputDict; batchsize = 100, dataSize=1
 
    max_input = findMax(inputStr)
    max_output = findMax(outputStr)
-   print(max_input)
+   
    inBatch = zeros(length(inDict),max_input+2+max_output,batchsize)
    outBatch = zeros(length(outDict),max_input+2+max_output,batchsize)
 
