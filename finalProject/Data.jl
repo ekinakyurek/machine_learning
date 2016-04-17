@@ -1,15 +1,13 @@
-using Knet
-
-global x = [];
-global ygold = [];
-
+global dataX = [];
+global dataY = [];
+global dataMask = nothing
 global inPad;
 global outPad;
 global inputEndMark;
 global outputEndMark;
 
-inDict =  Dict{Any,Int}();
-outDict = Dict{Any,Int}();
+global inDict =  Dict{Any,Int}();
+global outDict = Dict{Any,Int}();
 
 function readData(input,output,inputDict,outputDict; batchsize = 100, dataSize=1000)
   inputEndMark,outputEndMark, inPad, outPad = SetDictionaries(inputDict,outputDict)
@@ -80,8 +78,8 @@ function readData(input,output,inputDict,outputDict; batchsize = 100, dataSize=1
     inBatch[:,max_input+1+max_output+1,y] = inputEndMark
     outBatch[:,max_input+1+max_output+1,y] = zeros(length(outDict))
   end
-    push!(x,inBatch)
-    push!(ygold,outBatch)
+    push!(dataX,inBatch)
+    push!(dataY,outBatch)
  end
 end
 

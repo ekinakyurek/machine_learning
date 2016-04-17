@@ -1,4 +1,4 @@
-@knet function rnn_model(character; fbias=0, numbers=11, nlayer=2, o...)
+@knet function rnn_model(character; fbias=0, numbers=47, nlayer=2, o...)
     if !decoding
         h = lstm2(character; nlayer=nlayer,o...)
     else
