@@ -35,6 +35,7 @@ function main(args=ARGS)
     seed > 0 && setseed(seed)
 
     dict = (dictfile == nothing ? datafiles[1] : dictfile)
+    readData("Output.txt", "Output.txt", "TargetDict", "TargetDict")
     
     global model = compile(:copyseq; fbias=fbias, numbers=length(inDict), nlayer = 2, out=hidden, winit=eval(parse(winit)))
     setp(model; lr=lr)
@@ -51,14 +52,13 @@ function main(args=ARGS)
     println("epoch  secs    ptrain  ptest.. wnorm  gnorm")
     myprint(a...)=(for x in a; @printf("%-6g ",x); end; println(); flush(STDOUT))
     for epoch=1:100
-      readData("Output.txt", "Output.txt", "TargetDict", "TargetDict")
       fast || (fill!(maxnorm,0); fill!(losscnt,0))
       train(model, softloss; gclip=gclip, maxnorm=maxnorm, losscnt=losscnt, lossreport=lossreport)
       fast || (perp[1] = losscnt[1]/losscnt[2])
       readData("OutputT.txt", "OutputT.txt", "TargetDict", "TargetDict")
       loss = test(model, zeroone)
       perp[2] = loss
-
+      readData("Output.txt", "Output.txt", "TargetDict", "TargetDict")
       myprint(epoch, (time_ns()-t0)/1e9, perp..., (fast ? [] : maxnorm)...)
       gcheck > 0 && gradcheck(model,
                             f->(train(f,softloss;losscnt=fill!(losscnt,0),gcheck=true);losscnt[1]),
