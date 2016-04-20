@@ -42,8 +42,8 @@ function main(args=ARGS)
 
     #
     # if nosharing
-    #     set!(model, :forwoverwrite, false)
-    #     set!(model, :backoverwrite, false)
+         set!(model, :forwoverwrite, false)
+         set!(model, :backoverwrite, false)
     # end
 
     perp = zeros(2)

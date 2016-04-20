@@ -164,10 +164,11 @@ function s2s_loop(m, loss; gcheck=false, o...)
         ygold = zeros(length(outDict),batchsize)
         mask = zeros(Cuchar,batchsize)
         
+
         copy!(x,dataX[batchNo][:,j,:])
         copy!(ygold,dataY[batchNo][:,j,:])
         copy!(mask,dataMask[batchNo][j,:])
-
+                println(sum(mask))
         nwords = (mask == nothing ? size(x,2) : sum(mask))
        
         # x,ygold,mask are cpu arrays; x gets copied to gpu by forw; we should do the other two here

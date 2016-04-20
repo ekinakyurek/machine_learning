@@ -68,37 +68,28 @@ function main(args=ARGS)
 end
 
 # This copies lstm exactly for replicatability:
-@knet function copyseq(word; fbias=0, vocab=0,numbers=47, nlayer=2, o...)
-  if !decoding
-      x = wdot(word; o...)
-      input  = wbf3(x,h,h; o..., f=:sigm)
-      forget = wbf2(x,h; o..., f=:sigm, binit=Constant(fbias))
-      output = wbf2(x,h; o..., f=:sigm)
-      newmem = wbf2(x,h; o..., f=:tanh)
-  else
-      x = wdot(word; o...)
-      input  = wbf3(x,h,h; o..., f=:sigm)
-      forget = wbf2(x,h; o..., f=:sigm, binit=Constant(fbias))
-      output = wbf2(x,h; o..., f=:sigm)
-      newmem = wbf2(x,h; o..., f=:tanh)
-  end
-  cell = input .* newmem + cell .* forget
-  h  = tanh(cell) .* output
-  if decoding
-      tvec = wdot(h; out=vocab)
-      return soft(tvec)
-  end
+@knet function copyseq(word; fbias=0, vocab=0, o...)
+    if !decoding
+        x = wdot(word; o...)
+        input  = wbf2(x,h; o..., f=:sigm)
+        forget = wbf2(x,h; o..., f=:sigm, binit=Constant(fbias))
+        output = wbf2(x,h; o..., f=:sigm)
+        newmem = wbf2(x,h; o..., f=:tanh)
+    else
+        x = wdot(word; o...)
+        input  = wbf2(x,h; o..., f=:sigm)
+        forget = wbf2(x,h; o..., f=:sigm, binit=Constant(fbias))
+        output = wbf2(x,h; o..., f=:sigm)
+        newmem = wbf2(x,h; o..., f=:tanh)
+    end
+    cell = input .* newmem + cell .* forget
+    h  = tanh(cell) .* output
+    if decoding
+        tvec = wdot(h; out=vocab)
+        return soft(tvec)
+    end
 end
 
-@knet function wbf3(x1, x2, x3; f=:sigm, o...)
-    y1 = wdot(x1; o...)
-    y2 = wdot(x2; o...)
-    y3 = wdot(x3, o...)
-    x3 = add(y2,y1)
-    x4 = add(x3,y3)
-    y4 = bias(x4; o...)
-    return f(y4; o...)
-end
 @knet function copyseq1(word; fbias=0, vocab=0, o...)
     if decoding
         x = wdot(word; o...)
@@ -160,7 +151,6 @@ function s2s_loop(m, data, loss; gcheck=false, o...)
             mask != nothing && (mask = s2s_mask  = copytogpu(s2s_mask,mask)) # mask not used when ygold=nothing
         end
         if decoding && ygold == nothing # the next sentence started
-            print("gradcheck")
             gcheck && break
             s2s_eos(m, data, loss; gcheck=gcheck, o...)
             reset!(m)
@@ -168,15 +158,12 @@ function s2s_loop(m, data, loss; gcheck=false, o...)
         end
         if !decoding && ygold != nothing # source ended, target sequence started
             # s2s_copyforw!(m)
-            print("decode start")
             decoding = true
         end
         if decoding && ygold != nothing # keep decoding target
-            print("decode")
             s2s_decode(m, x, ygold, mask, nwords, loss; o...)
         end
         if !decoding && ygold == nothing # keep encoding source
-        print("encode")
             s2s_encode(m, x; o...)
         end
     end
@@ -186,7 +173,7 @@ end
 function s2s_encode(m, x; trn=false, o...)
     # forw(m.encoder, x; trn=trn, seq=true, o...)
     (trn?sforw:forw)(m, x; decoding=false)
-end
+end    
 
 function s2s_decode(m, x, ygold, mask, nwords, loss; trn=false, ystack=nothing, losscnt=nothing, o...)
     # ypred = forw(m.decoder, x; trn=trn, seq=true, o...)
