@@ -160,6 +160,7 @@ function s2s_loop(m, data, loss; gcheck=false, o...)
             mask != nothing && (mask = s2s_mask  = copytogpu(s2s_mask,mask)) # mask not used when ygold=nothing
         end
         if decoding && ygold == nothing # the next sentence started
+            print("gradcheck")
             gcheck && break
             s2s_eos(m, data, loss; gcheck=gcheck, o...)
             reset!(m)
@@ -167,12 +168,15 @@ function s2s_loop(m, data, loss; gcheck=false, o...)
         end
         if !decoding && ygold != nothing # source ended, target sequence started
             # s2s_copyforw!(m)
+            print("decode start")
             decoding = true
         end
         if decoding && ygold != nothing # keep decoding target
+            print("decode")
             s2s_decode(m, x, ygold, mask, nwords, loss; o...)
         end
         if !decoding && ygold == nothing # keep encoding source
+        print("encode")
             s2s_encode(m, x; o...)
         end
     end

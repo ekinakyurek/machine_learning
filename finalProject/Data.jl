@@ -1,6 +1,6 @@
 global dataX = [];
 global dataY = [];
-global dataMask = nothing
+global dataMask = [];
 global inPad;
 global outPad;
 global inputEndMark;
@@ -23,9 +23,10 @@ function readData(input,output,inputDict,outputDict; batchsize = 100, dataSize=1
 
    max_input = findMax(inputStr)
    max_output = findMax(outputStr)
-   
+
    inBatch = zeros(length(inDict),max_input+2+max_output,batchsize)
    outBatch = zeros(length(outDict),max_input+2+max_output,batchsize)
+
 
    for x=1:max_input
      for y=1:batchsize

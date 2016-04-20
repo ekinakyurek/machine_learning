@@ -6,8 +6,8 @@ args = sys.argv
 length = int(args[1])
 size = int(args[2])
 
-inputFile = open('Input.txt','w')
-outputFile = open('Output.txt','w')
+inputFile = open('InputT.txt','w')
+outputFile = open('OutputT.txt','w')
 
 max_number = math.pow(10, length + 1)
 min_number = math.pow(10, length)
