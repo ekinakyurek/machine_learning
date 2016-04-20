@@ -156,24 +156,24 @@ function s2s_loop(m, loss; gcheck=false, o...)
     reset!(m)
    
     for batchNo = 1:length(dataX)
-    
-      nwords = batchsize
       
       for j=1:size(dataX[batchNo],2)
       
         #mask = ones(Cuchar, batchsize)
         x = zeros(length(outDict),batchsize)
         ygold = zeros(length(outDict),batchsize)
+        mask = zeros(Cuchar,batchsize)
         
         copy!(x,dataX[batchNo][:,j,:])
         copy!(ygold,dataY[batchNo][:,j,:])
+        copy!(mask,dataMask[batchNo][j,:])
 
-
+        nwords = (mask == nothing ? size(x,2) : sum(mask))
        
         # x,ygold,mask are cpu arrays; x gets copied to gpu by forw; we should do the other two here
         if ygold != nothing && gpu()
             ygold = s2s_ygold = copytogpu(s2s_ygold,ygold)
-            #mask != nothing && (mask = s2s_mask  = copytogpu(s2s_mask,mask)) # mask not used when ygold=nothing
+            mask != nothing && (mask = s2s_mask  = copytogpu(s2s_mask,mask)) # mask not used when ygold=nothing
         end
         if decoding && ygold ==  zeros(length(outDict),batchsize) # the next sentence started
           
@@ -190,7 +190,7 @@ function s2s_loop(m, loss; gcheck=false, o...)
         end
         if decoding && ygold != zeros(length(outDict),batchsize) # keep decoding target
   
-            s2s_decode(m, x, ygold, nwords, loss; o...)
+            s2s_decode(m, x, ygold,mask, nwords, loss; o...)
         end
         if !decoding && ygold == zeros(length(outDict),batchsize) # keep encoding source
         
@@ -206,18 +206,18 @@ function s2s_encode(m, x; trn=false, o...)
     (trn?sforw:forw)(m, x; decoding=false)
 end
 
-function s2s_decode(m, x, ygold, nwords, loss; trn=false, ystack=nothing, losscnt=nothing, o...)
+function s2s_decode(m, x, ygold, mask, nwords, loss; trn=false, ystack=nothing, losscnt=nothing, o...)
     # ypred = forw(m.decoder, x; trn=trn, seq=true, o...)
     ypred = (trn?sforw:forw)(m, x; decoding=true)
   
-    ystack != nothing  && push!(ystack, (copy(ygold),copy(ygold))) # TODO: get rid of alloc
-    losscnt != nothing && s2s_loss(m, ypred, ygold, nwords, loss; losscnt=losscnt, o...)
+    ystack != nothing  && push!(ystack, (copy(ygold),copy(mask))) # TODO: get rid of alloc
+    losscnt != nothing && s2s_loss(m, ypred, ygold, mask, nwords, loss; losscnt=losscnt, o...)
 end
 
-function s2s_loss(m, ypred, ygold, nwords, loss; losscnt=nothing, lossreport=0, o...)
+function s2s_loss(m, ypred, ygold, mask, nwords, loss; losscnt=nothing, lossreport=0, o...)
     (yrows, ycols) = size2(ygold)  # TODO: loss should handle mask, currently only softloss does.
   
-    losscnt[1] += loss(ypred,ygold) 
+    losscnt[1] += loss(ypred,ygold; mask=mask) 
                                    # loss divides total loss by minibatch size ycols.  at the end the total loss will be equal to
     losscnt[2] += nwords/ycols  #print(losscnt[2])              # losscnt[1]*ycols.  losscnt[1]/losscnt[2] will equal totalloss/totalwords.
     # we could scale losscnt with ycols so losscnt[1] is total loss and losscnt[2] is total words, but I think that breaks gradcheck since the scaled versions are what gets used for parameter updates in order to prevent batch size from effecting step size.
@@ -244,7 +244,7 @@ function s2s_bptt(m, ystack, loss; o...)
     while !isempty(ystack)
         (ygold,mask) = pop!(ystack)
         # back(m.decoder, ygold, loss; seq=true, mask=mask, o...)
-        sback(m, ygold, loss; o...) # back passes mask on to loss
+        sback(m, ygold, loss; mask=mask, o...) # back passes mask on to loss
     end
     # @assert m.decoder.sp == 0
     # s2s_copyback!(m)

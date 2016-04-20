@@ -26,17 +26,21 @@ function readData(input,output,inputDict,outputDict; batchsize = 100, dataSize=1
 
    inBatch = zeros(length(inDict),max_input+2+max_output,batchsize)
    outBatch = zeros(length(outDict),max_input+2+max_output,batchsize)
+   mask  = ones(Cuchar,max_input+2+max_output,batchsize)
 
-
-   for x=1:max_input
+   for x= max_input:-1:1
+     index=0
      for y=1:batchsize
         outBatch[:,x,y] = zeros(length(outDict))
        if x > length(inputStr[y])
-         inBatch[:,x,y] = inPad
+         inBatch[:,max_input-x+1,y] = inPad
+         mask[max_input-x+1,y] = 0
        else
+         index = 1
          a = zeros(length(inDict))
-         a[inDict[inputStr[y][x]]] = 1
-         inBatch[:,x,y] = a
+         a[inDict[inputStr[y][index]]] = 1
+         inBatch[:,max_input-x+1,y] = a
+         index += 1
       end
     end
    end
@@ -51,12 +55,15 @@ function readData(input,output,inputDict,outputDict; batchsize = 100, dataSize=1
    for x=1:max_output-1
     for y=1:batchsize
       if x > length(outputStr[y])
+        mask[max_input+1+x,y] = 0
         inBatch[:,max_input+1+x,y] = inPad
+        
       else
         a = zeros(length(inDict))
         a[inDict[outputStr[y][x]]] = 1
         inBatch[:,max_input+1+x,y] = a
       end
+      
       if x + 1 > length(outputStr[y])
         outBatch[:,max_input+1+x,y] = outPad
       else
@@ -64,12 +71,16 @@ function readData(input,output,inputDict,outputDict; batchsize = 100, dataSize=1
         a[outDict[outputStr[y][x+1]]] = 1
        outBatch[:,max_input+1+x,y] = a
       end
+      
     end
    end
+   
+   
    for y=1:batchsize
      outBatch[:,max_input+1+max_output,y] = outputEndMark
      if max_output > length(outputStr[y])
         inBatch[:,max_input+1+max_output,y] = inPad
+        mask[max_input+1+max_output,y] = 0
      else
         a = zeros(length(inDict))
         a[inDict[outputStr[y][max_output]]] = 1
@@ -81,6 +92,7 @@ function readData(input,output,inputDict,outputDict; batchsize = 100, dataSize=1
   end
     push!(dataX,inBatch)
     push!(dataY,outBatch)
+    push!(dataMask,mask)
  end
 end
 
