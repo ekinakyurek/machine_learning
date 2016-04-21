@@ -37,7 +37,7 @@ function main(args=ARGS)
     dict = (dictfile == nothing ? datafiles[1] : dictfile)
     readData("OutTrn", "OutTrn", "NDict", "NDict"; trn=true)
     readData("OutTst", "OutTst", "NDict", "NDict")
-    global model = compile(:copyseq; fbias=fbias, numbers=length(inDict), nlayer = 2, out=hidden, winit=eval(parse(winit)))
+    global model = compile(:copyseq; fbias=fbias, numbers=length(outDict), nlayer = 2, out=hidden, winit=eval(parse(winit)))
     setp(model; lr=lr)
 
     #
@@ -84,6 +84,27 @@ end
 end
 
 @knet function copyseq(word; fbias=0, vocab=0,numbers=47, nlayer=2, o...)
+       x= copyseq2(word;fbias = fbias, vocab = vocab, numbers = numbers, nlayer=nlayer,o...)
+  if !decoding
+      input  = wbf2(x,h; o..., f=:sigm)
+      forget = wbf2(x,h; o..., f=:sigm, binit=Constant(fbias))
+      output = wbf2(x,h; o..., f=:sigm)
+      newmem = wbf2(x,h; o..., f=:tanh)
+  else
+      input  = wbf2(x,h; o..., f=:sigm)
+      forget = wbf2(x,h; o..., f=:sigm, binit=Constant(fbias))
+      output = wbf2(x,h; o..., f=:sigm)
+      newmem = wbf2(x,h; o..., f=:tanh)
+  end
+  cell = input .* newmem + cell .* forget
+  h  = tanh(cell) .* output
+  if decoding
+      tvec = wdot(h; out=numbers)
+      return soft(tvec)
+  end
+end
+
+@knet function copyseq2(word; fbias=0, vocab=0,numbers=47, nlayer=2, o...)
   if !decoding
       x = wdot(word; o...)
       input  = wbf2(x,h; o..., f=:sigm)
@@ -99,11 +120,9 @@ end
   end
   cell = input .* newmem + cell .* forget
   h  = tanh(cell) .* output
-  if decoding
-      tvec = wdot(h; out=numbers)
-      return soft(tvec)
-  end
+ return h
 end
+
 
 @knet function lstm2(x; nlayer=2, embedding=0, hidden=400, o...)
     a = wdot(x; out=hidden, o...)
