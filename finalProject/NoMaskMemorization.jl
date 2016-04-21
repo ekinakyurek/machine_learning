@@ -86,17 +86,15 @@ end
 @knet function copyseq(word; fbias=0, vocab=0,numbers=47, nlayer=2, o...)
        x= copyseq2(word;fbias = fbias, vocab = vocab, numbers = numbers, nlayer=nlayer,o...)
   if !decoding
-       x = wdot(word; o...)
-      input  = wbf3(x,h,cell; o..., f=:sigm)
-      forget = wbf3(x,h,cell; o..., f=:sigm, binit=Constant(fbias))
+      input  = wbf2(x,h; o..., f=:sigm)
+      forget = wbf2(x,h; o..., f=:sigm, binit=Constant(fbias))
+      output = wbf2(x,h; o..., f=:sigm)
       newmem = wbf2(x,h; o..., f=:tanh)
-      output = wbf3(x,h,cell; o..., f=:sigm)
   else
-          x = wdot(word; o...)
-      input  = wbf3(x,h,cell; o..., f=:sigm)
-      forget = wbf3(x,h,cell; o..., f=:sigm, binit=Constant(fbias))
+      input  = wbf2(x,h; o..., f=:sigm)
+      forget = wbf2(x,h; o..., f=:sigm, binit=Constant(fbias))
+      output = wbf2(x,h; o..., f=:sigm)
       newmem = wbf2(x,h; o..., f=:tanh)
-      output = wbf3(x,h,cell; o..., f=:sigm)
   end
   cell = input .* newmem + cell .* forget
   h  = tanh(cell) .* output
@@ -109,16 +107,16 @@ end
 @knet function copyseq2(word; fbias=0, vocab=0,numbers=47, nlayer=2, o...)
   if !decoding
       x = wdot(word; o...)
-      input  = wbf3(x,h,cell; o..., f=:sigm)
-      forget = wbf3(x,h,cell; o..., f=:sigm, binit=Constant(fbias))
+      input  = wbf2(x,h; o..., f=:sigm)
+      forget = wbf2(x,h; o..., f=:sigm, binit=Constant(fbias))
+      output = wbf2(x,h; o..., f=:sigm)
       newmem = wbf2(x,h; o..., f=:tanh)
-      output = wbf3(x,h,cell; o..., f=:sigm)
   else
       x = wdot(word; o...)
-      input  = wbf3(x,h,cell; o..., f=:sigm)
-      forget = wbf3(x,h,cell; o..., f=:sigm, binit=Constant(fbias))
+      input  = wbf2(x,h; o..., f=:sigm)
+      forget = wbf2(x,h; o..., f=:sigm, binit=Constant(fbias))
+      output = wbf2(x,h; o..., f=:sigm)
       newmem = wbf2(x,h; o..., f=:tanh)
-      output = wbf3(x,h,cell; o..., f=:sigm)
   end
   cell = input .* newmem + cell .* forget
   h  = tanh(cell) .* output
