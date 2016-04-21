@@ -1,6 +1,11 @@
 global dataX = [];
 global dataY = [];
 global dataMask = [];
+
+global dataXTST = [];
+global dataYTST = [];
+global dataMaskTST = [];
+
 global inPad;
 global outPad;
 global inputEndMark;
@@ -9,7 +14,7 @@ global outputEndMark;
 global inDict =  Dict{Any,Int}();
 global outDict = Dict{Any,Int}();
 
-function readData(input,output,inputDict,outputDict; batchsize = 100, dataSize=1000)
+function readData(input,output,inputDict,outputDict; batchsize = 100, dataSize=1000, trn=false)
   inputEndMark,outputEndMark, inPad, outPad = SetDictionaries(inputDict,outputDict)
   infile = open(input)
   outfile = open(output)
@@ -79,8 +84,13 @@ function readData(input,output,inputDict,outputDict; batchsize = 100, dataSize=1
     inBatch[:,max_input+1+max_output+1,y] = inputEndMark
     outBatch[:,max_input+1+max_output+1,y] = zeros(length(outDict))
   end
+  if trn 
     push!(dataX,inBatch)
     push!(dataY,outBatch)
+  else
+    push!(dataXTST,inBatch)
+    push!(dataYTST,outBatch)
+  end
  end
 end
 

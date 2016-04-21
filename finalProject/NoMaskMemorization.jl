@@ -35,15 +35,15 @@ function main(args=ARGS)
     seed > 0 && setseed(seed)
 
     dict = (dictfile == nothing ? datafiles[1] : dictfile)
-    readData("Output.txt", "Output.txt", "TargetDict", "TargetDict")
-    
+    readData("OutTrn", "OutTrn", "NDict", "NDict"; trn=true)
+    readData("OutTst", "OutTst", "NDict", "NDict")
     global model = compile(:copyseq; fbias=fbias, numbers=length(inDict), nlayer = 2, out=hidden, winit=eval(parse(winit)))
     setp(model; lr=lr)
 
     #
     # if nosharing
-         set!(model, :forwoverwrite, false)
-         set!(model, :backoverwrite, false)
+         #set!(model, :forwoverwrite, false)
+         #set!(model, :backoverwrite, false)
     # end
 
     perp = zeros(2)
@@ -55,14 +55,14 @@ function main(args=ARGS)
       fast || (fill!(maxnorm,0); fill!(losscnt,0))
       train(model, softloss; gclip=gclip, maxnorm=maxnorm, losscnt=losscnt, lossreport=lossreport)
       fast || (perp[1] = losscnt[1]/losscnt[2])
-      readData("OutputT.txt", "OutputT.txt", "TargetDict", "TargetDict")
+
       loss = test(model, zeroone)
       perp[2] = loss
-      readData("Output.txt", "Output.txt", "TargetDict", "TargetDict")
+
       myprint(epoch, (time_ns()-t0)/1e9, perp..., (fast ? [] : maxnorm)...)
       gcheck > 0 && gradcheck(model,
                             f->(train(f,softloss;losscnt=fill!(losscnt,0),gcheck=true);losscnt[1]),
-                            f->(test(f,softloss;losscnt=fill!(losscnt,0),gcheck=true);losscnt[1]);
+                            f->(test(f, softloss;losscnt=fill!(losscnt,0),gcheck=true);losscnt[1]);
                             gcheck=gcheck)
     end
     return (fast ? (perp...) :  (perp..., maxnorm...))
@@ -132,11 +132,11 @@ end
 end
 
 function train(m, loss; o...)
-    s2s_loop(m, loss; trn=true, ystack=Any[], o...)
+    s2s_loop(m,loss; trn=true, ystack=Any[], o...)
 end
 
 function test(m, loss; losscnt=zeros(2), o...)
-    s2s_loop(m, loss; losscnt=losscnt, o...)
+    s2s_loop_tst(m,loss; losscnt=losscnt, o...)
     losscnt[1]/losscnt[2]
 end
 
@@ -147,6 +147,58 @@ s2s_mask = nothing
 @gpu copytogpu(y,x::SparseMatrixCSC)=CudaSparseMatrixCSC(x)
 @gpu copytogpu{T}(y::CudaArray{T},x::Array{T})=(size(x)==size(y) ? copysync!(y,x) : copytogpu(nothing,x))
 @gpu copytogpu{T}(y::CudaSparseMatrixCSC{T},x::SparseMatrixCSC{T})=(size(x)==size(y) ? copysync!(y,x) : copytogpu(nothing,x))
+
+function s2s_loop_tst(m, loss; gcheck=false, o...)
+    global s2s_ygold, s2s_mask
+    s2s_lossreport()
+    decoding = false
+    reset!(m)
+   
+    for batchNo = 1:length(dataXTST)
+    
+      nwords = batchsize
+      
+      for j=1:size(dataXTST[batchNo],2)
+      
+        #mask = ones(Cuchar, batchsize)
+        x = zeros(length(outDict),batchsize)
+        ygold = zeros(length(outDict),batchsize)
+        
+        copy!(x,dataXTST[batchNo][:,j,:])
+        copy!(ygold,dataYTST[batchNo][:,j,:])
+
+
+       
+        # x,ygold,mask are cpu arrays; x gets copied to gpu by forw; we should do the other two here
+        if ygold != nothing && gpu()
+            #ygold = s2s_ygold = copytogpu(s2s_ygold,ygold)
+            #mask != nothing && (mask = s2s_mask  = copytogpu(s2s_mask,mask)) # mask not used when ygold=nothing
+        end
+        if decoding && ygold ==  zeros(length(outDict),batchsize) # the next sentence started
+          
+            gcheck && break
+            s2s_eos(m, loss; gcheck=gcheck, o...)
+            reset!(m)
+            decoding = false
+        end
+        if !decoding && ygold != zeros(length(outDict),batchsize)
+      
+         # source ended, target sequence started
+            # s2s_copyforw!(m)
+            decoding = true
+        end
+        if decoding && ygold != zeros(length(outDict),batchsize) # keep decoding target
+  
+            s2s_decode(m, x, ygold, nwords, loss; o...)
+        end
+        if !decoding && ygold == zeros(length(outDict),batchsize) # keep encoding source
+        
+            s2s_encode(m, x; o...)
+        end
+      end
+     end
+    s2s_eos(m, loss; gcheck=gcheck, o...)
+end
 
 
 function s2s_loop(m, loss; gcheck=false, o...)
@@ -172,7 +224,7 @@ function s2s_loop(m, loss; gcheck=false, o...)
        
         # x,ygold,mask are cpu arrays; x gets copied to gpu by forw; we should do the other two here
         if ygold != nothing && gpu()
-            ygold = s2s_ygold = copytogpu(s2s_ygold,ygold)
+            #ygold = s2s_ygold = copytogpu(s2s_ygold,ygold)
             #mask != nothing && (mask = s2s_mask  = copytogpu(s2s_mask,mask)) # mask not used when ygold=nothing
         end
         if decoding && ygold ==  zeros(length(outDict),batchsize) # the next sentence started

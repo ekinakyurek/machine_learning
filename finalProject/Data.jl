@@ -1,6 +1,11 @@
 global dataX = [];
 global dataY = [];
 global dataMask = [];
+
+global dataXTST = [];
+global dataYTST = [];
+global dataMaskTST = [];
+
 global inPad;
 global outPad;
 global inputEndMark;
