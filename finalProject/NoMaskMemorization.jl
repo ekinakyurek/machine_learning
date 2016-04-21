@@ -33,7 +33,7 @@ function main(args=ARGS)
     println(opts)
     for (k,v) in opts; @eval ($(symbol(k))=$v); end
     seed > 0 && setseed(seed)
-
+ 
     dict = (dictfile == nothing ? datafiles[1] : dictfile)
     readData("OutTrn", "OutTrn", "NDict", "NDict"; trn=true)
     readData("OutTst", "OutTst", "NDict", "NDict")
@@ -50,7 +50,10 @@ function main(args=ARGS)
     (maxnorm,losscnt) = fast ? (nothing,nothing) : (zeros(2),zeros(2))
     t0 = time_ns()
     println("epoch  secs    ptrain  ptest.. wnorm  gnorm")
-    myprint(a...)=(for x in a; @printf("%-6g ",x); end; println(); flush(STDOUT))
+    
+    myoutputs = open("rnn.out","w")
+    myprint(a...)=(for x in a; @printf(myoutputs,"%-6g ",x); end; write(myoutputs,"\n"); flush(myoutputs); close(myoutputs))
+   
     for epoch=1:100
       fast || (fill!(maxnorm,0); fill!(losscnt,0))
       train(model, softloss; gclip=gclip, maxnorm=maxnorm, losscnt=losscnt, lossreport=lossreport)
@@ -60,6 +63,7 @@ function main(args=ARGS)
       perp[2] = loss
 
       myprint(epoch, (time_ns()-t0)/1e9, perp..., (fast ? [] : maxnorm)...)
+     
       gcheck > 0 && gradcheck(model,
                             f->(train(f,softloss;losscnt=fill!(losscnt,0),gcheck=true);losscnt[1]),
                             f->(test(f, softloss;losscnt=fill!(losscnt,0),gcheck=true);losscnt[1]);
