@@ -52,7 +52,8 @@ function main(args=ARGS)
     println("epoch  secs    ptrain  ptest.. wnorm  gnorm")
     
     myoutputs = open("rnn.out","w")
-    myprint(a...)=(for x in a; @printf(myoutputs,"%-6g ",x); end; write(myoutputs,"\n"); flush(myoutputs); close(myoutputs))
+    fileprint(a...)=(for x in a; @printf(myoutputs,"%-6g ",x); end; write(myoutputs,"\n"); flush(myoutputs))
+    myprint(a...)=(for x in a; @printf("%-6g ",x); end; println();flush(STDOUT))
    
     for epoch=1:100
       fast || (fill!(maxnorm,0); fill!(losscnt,0))
@@ -63,6 +64,7 @@ function main(args=ARGS)
       perp[2] = loss
 
       myprint(epoch, (time_ns()-t0)/1e9, perp..., (fast ? [] : maxnorm)...)
+      fileprint(epoch, (time_ns()-t0)/1e9, perp..., (fast ? [] : maxnorm)...)
      
       gcheck > 0 && gradcheck(model,
                             f->(train(f,softloss;losscnt=fill!(losscnt,0),gcheck=true);losscnt[1]),
@@ -70,6 +72,7 @@ function main(args=ARGS)
                             gcheck=gcheck)
     end
     return (fast ? (perp...) :  (perp..., maxnorm...))
+    close(myoutputs)
 end
 
 
@@ -88,7 +91,9 @@ end
 end
 
 @knet function copyseq(word; fbias=0, vocab=0,numbers=47, nlayer=2, o...)
-       x= copyseq2(word;fbias = fbias, vocab = vocab, numbers = numbers, nlayer=nlayer,o...)
+       
+       t= copyseq2(word;fbias = fbias, vocab = vocab, numbers = numbers, nlayer=nlayer,o...)
+       x= relu(t)
   if !decoding
       input  = wbf2(x,h; o..., f=:sigm)
       forget = wbf2(x,h; o..., f=:sigm, binit=Constant(fbias))
