@@ -21,13 +21,15 @@ def splitCharacter(text):
     newtext = newtext + "\n"
     return newtext
         
-for i in range(size):
-    length = int(random.uniform(5,35))
-    max_number = math.pow(10, length + 1)                                               
-    min_number = math.pow(10, length)      
-    var = int(random.uniform(min_number, max_number))
-    inputFile.write(str(var)+"\n")
-    SpacedinputFile.write(splitCharacter(str(var)))
-
+for i in range(size/100):
+    length = int(random.uniform(5,35))                                                
+    max_number = math.pow(10, length + 1)                                    
+    min_number = math.pow(10, length)     
+    for i in range(100):   
+        var = int(random.uniform(min_number, max_number))
+        inputFile.write(str(var)+"\n")
+        inputFile.write(str(var)[::-1]+"\n") 
+        SpacedinputFile.write(splitCharacter(str(var)))
+        SpacedinputFile.write(splitCharacter(str(var)[::-1]))
 inputFile.close()
 SpacedinputFile.close()

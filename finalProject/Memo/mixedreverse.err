@@ -1,0 +1,10 @@
+INFO: Learning to copy sequences to test the S2S model.
+ERROR: LoadError: SystemError: opening file MemoTrn: No such file or directory
+ in open at ./iostream.jl:90
+ in readData at /mnt/kufs/scratch/eakyurek13/machine_learning/finalProject/Memo/NoMaskData.jl:19
+ in main at /mnt/kufs/scratch/eakyurek13/machine_learning/finalProject/Memo/NoMaskMemorization.jl:38
+ in include at ./boot.jl:261
+ in include_from_node1 at ./loading.jl:304
+ in process_options at ./client.jl:280
+ in _start at ./client.jl:378
+while loading /mnt/kufs/scratch/eakyurek13/machine_learning/finalProject/Memo/NoMaskMemorization.jl, in expression starting on line 368

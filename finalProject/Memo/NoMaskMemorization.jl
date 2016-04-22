@@ -35,8 +35,8 @@ function main(args=ARGS)
     seed > 0 && setseed(seed)
  
     dict = (dictfile == nothing ? datafiles[1] : dictfile)
-    readData("OutTrn", "OutTrn", "NDict", "NDict"; trn=true)
-    readData("OutTst", "OutTst", "NDict", "NDict")
+    readData("MemoTrn", "MemoTrn", "NDict", "NDict"; trn=true)
+    readData("MemoTst", "MemoTst", "NDict", "NDict")
     global model = compile(:copyseq; fbias=fbias, numbers=length(outDict), nlayer = 2, out=hidden, winit=eval(parse(winit)))
     setp(model; lr=lr)
 
@@ -64,7 +64,7 @@ function main(args=ARGS)
       perp[2] = loss
 
       myprint(epoch, (time_ns()-t0)/1e9, perp..., (fast ? [] : maxnorm)...)
-      fileprint(epoch, (time_ns()-t0)/1e9, perp..., (fast ? [] : maxnorm)...)
+#      fileprint(epoch, (time_ns()-t0)/1e9, perp..., (fast ? [] : maxnorm)...)
      
       gcheck > 0 && gradcheck(model,
                             f->(train(f,softloss;losscnt=fill!(losscnt,0),gcheck=true);losscnt[1]),
