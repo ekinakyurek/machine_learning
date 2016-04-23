@@ -27,8 +27,8 @@ min_number = math.pow(10, leng)
 
 max_len = int(size/100)
 for len in range(max_len):
-    max_number = math.pow(10, leng + 1)                                    
-    min_number = math.pow(10, leng)
+   # max_number = math.pow(10, leng + 1)                                    
+   # min_number = math.pow(10, leng)
     
     for i in range(100):   
         var = int(random.uniform(min_number, max_number))
