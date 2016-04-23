@@ -35,8 +35,8 @@ function main(args=ARGS)
     seed > 0 && setseed(seed)
  
     dict = (dictfile == nothing ? datafiles[1] : dictfile)
-    readData("MemoTrn", "MemoTrn", "NDict", "NDict"; trn=true)
-    readData("MemoTst", "MemoTst", "NDict", "NDict")
+    readData("InTrn", "OutTrn", "NDict", "NDict"; trn=true)
+    readData("InTst", "OutTst", "NDict", "NDict")
     global model = compile(:copyseq; fbias=fbias, numbers=length(outDict), nlayer = 2, out=hidden, winit=eval(parse(winit)))
     setp(model; lr=lr)
 

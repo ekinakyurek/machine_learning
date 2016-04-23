@@ -37,14 +37,15 @@ for len in range(max_len):
     for i in range(100):                                                                    
         var = int(random.uniform(min_number, max_number))                                 
         inputFile.write(str(var)+"\n")   #input                                           
-        inputFile.write(str(var) + str(var)+"\n") #doubled input                           
+        ##inputFile.write(str(var) + str(var)+"\n") #doubled input                           
         inputFile.write(str(var)[::-1]+"\n") # reversed input                             
         outputFile.write(str(var)+"\n") # output                                          
-        outputFile.write(str(var)+"\n") # output                                          
+        ##outputFile.write(str(var)+"\n") # output                                          
         outputFile.write(str(var)+"\n") # output                                          
         SpacedinputFile.write(splitCharacter(str(var)))                                   
-        SpacedinputFile.write(splitCharacter(str(var)+str(var)))                          
+        ##SpacedinputFile.write(splitCharacter(str(var)+str(var)))                          
         SpacedinputFile.write(splitCharacter(str(var)[::-1]))
+ 
  
     if len%100 == 1:
         leng = leng + 1
