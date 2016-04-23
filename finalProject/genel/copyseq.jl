@@ -11,7 +11,7 @@ function main(args=ARGS)
     @add_arg_table s begin
         ("datafiles"; nargs='+'; required=true; help="First file used for training")
         ("--dictfile"; help="Dictionary file, first datafile used if not specified")
-        ("--epochs"; arg_type=Int; default=20)
+        ("--epochs"; arg_type=Int; default=100)
         ("--hidden"; arg_type=Int; default=400)
         ("--batchsize"; arg_type=Int; default=100)
         ("--lossreport"; arg_type=Int; default=0)
@@ -55,8 +55,8 @@ function main(args=ARGS)
         train(model, data[1], softloss; gclip=gclip, maxnorm=maxnorm, losscnt=losscnt, lossreport=lossreport)
         fast || (perp[1] = exp(losscnt[1]/losscnt[2]))
         for d=2:length(data)
-            loss = test(model, data[d], softloss)
-            perp[d] = exp(loss)
+            loss = test(model, data[d], zeroone)
+            perp[d] = loss
         end
         myprint(epoch, (time_ns()-t0)/1e9, perp..., (fast ? [] : maxnorm)...)
         gcheck > 0 && gradcheck(model,
@@ -69,6 +69,7 @@ end
 
 # This copies lstm exactly for replicatability:
 @knet function copyseq(word; fbias=0, vocab=0, o...)
+       # x=copyseq2(word; fbias=fbias, vocab=vocab, o...)
     if !decoding
         x = wdot(word; o...)
         input  = wbf2(x,h; o..., f=:sigm)
@@ -90,35 +91,26 @@ end
     end
 end
 
-@knet function copyseq1(word; fbias=0, vocab=0, o...)
-    if decoding
-        x = wdot(word; o...)
-        input  = sigm(aff2(x,h; o...))
-        forget = sigm(aff2(x,h; o..., binit=Constant(fbias)))
-        output = sigm(aff2(x,h; o...))
-        newmem = tanh(aff2(x,h; o...))
-    else
-        x = wdot(word; o...)
-        input  = sigm(aff2(x,h; o...))
-        forget = sigm(aff2(x,h; o..., binit=Constant(fbias)))
-        output = sigm(aff2(x,h; o...))
-        newmem = tanh(aff2(x,h; o...))
-    end
-    c = input .* newmem + c .* forget
-    h  = tanh(c) .* output
-    if decoding
-        return soft(wdot(h; out=vocab))
-    end
+@knet function copyseq2(word; fbias=0, vocab=0, o...)
+  if !decoding
+      x = wdot(word; o...)
+      input  = wbf2(x,h; o..., f=:sigm)
+      forget = wbf2(x,h; o..., f=:sigm, binit=Constant(fbias))
+      output = wbf2(x,h; o..., f=:sigm)
+      newmem = wbf2(x,h; o..., f=:tanh)
+  else
+      x = wdot(word; o...)
+      input  = wbf2(x,h; o..., f=:sigm)
+      forget = wbf2(x,h; o..., f=:sigm, binit=Constant(fbias))
+      output = wbf2(x,h; o..., f=:sigm)
+      newmem = wbf2(x,h; o..., f=:tanh)
+  end
+  cell = input .* newmem + cell .* forget
+  h  = tanh(cell) .* output
+ return h
 end
 
-@knet function aff2(x,y; out=0, o...)
-    a = par(; o..., dims=(out,0))
-    b = par(; o..., dims=(out,0))
-    c = par(; o..., dims=(0,))
-    # return a*x+b*y+c
-    xy = a*x+b*y
-    return c+xy
-end
+
 
 function train(m, data, loss; o...)
     s2s_loop(m, data, loss; trn=true, ystack=Any[], o...)
@@ -147,8 +139,8 @@ function s2s_loop(m, data, loss; gcheck=false, o...)
         nwords = (mask == nothing ? size(x,2) : sum(mask))
         # x,ygold,mask are cpu arrays; x gets copied to gpu by forw; we should do the other two here
         if ygold != nothing && gpu()
-            ygold = s2s_ygold = copytogpu(s2s_ygold,ygold)
-            mask != nothing && (mask = s2s_mask  = copytogpu(s2s_mask,mask)) # mask not used when ygold=nothing
+            #ygold = s2s_ygold = copytogpu(s2s_ygold,ygold)
+            #mask != nothing && (mask = s2s_mask  = copytogpu(s2s_mask,mask)) # mask not used when ygold=nothing
         end
         if decoding && ygold == nothing # the next sentence started
             gcheck && break
