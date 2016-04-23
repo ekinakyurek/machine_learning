@@ -195,7 +195,7 @@ function s2s_loop_tst(m, loss; gcheck=false, o...)
         ygold = zeros(length(outDict),batchsize)
         copy!(x,dataXTST[batchNo][:,j,:])
         copy!(ygold,dataYTST[batchNo][:,j,:])
-        println(ygold)
+#        println(ygold)
           
           
         # x,ygold,mask are cpu arrays; x gets copied to gpu by forw; we should do the other two here

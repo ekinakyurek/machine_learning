@@ -52,7 +52,6 @@ min_number = math.pow(10, leng)
  
 
 for len in range(int(size/300)):
-    
     if type == "trn": 
         max_number = math.pow(10, leng + 1)                                    
         min_number = math.pow(10, leng)
@@ -60,8 +59,11 @@ for len in range(int(size/300)):
         batch = []
         
         for i in range(100):                                                                    
-            var = int(random.uniform(min_number, max_number))  
-            
+    	    if i%2==0:       
+                var = int(random.uniform(min_number, max_number))  
+            else:
+                length = int(random.uniform(5,65))
+                var = int(random.uniform(math.pow(10, length),math.pow(10, length+1)))
             inputFile.write(str(var)+"\n")   #input                                          
             outputFile.write(str(var)+"\n") # output   
                                                 

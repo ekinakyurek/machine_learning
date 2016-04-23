@@ -39,8 +39,8 @@ function main(args=ARGS)
 
     global data = Any[]
 
-    push!(data, S2SData("SInTrn"; batchsize=batchsize, ftype=eval(parse(ftype)), dense=dense, dict=dict))
-    push!(data, S2SData("SInTst"; batchsize=batchsize, ftype=eval(parse(ftype)), dense=dense, dict=dict)) 
+    push!(data, S2SData("SInTrn","SOutTrn"; batchsize=batchsize, ftype=eval(parse(ftype)), dense=dense, dict=dict))
+    push!(data, S2SData("SInTst","SOutTrn"; batchsize=batchsize, ftype=eval(parse(ftype)), dense=dense, dict=dict)) 
     
     vocab = maxtoken(data[1],2)
     
