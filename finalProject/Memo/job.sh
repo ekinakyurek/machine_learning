@@ -11,5 +11,5 @@
 #$ -M eakyurek13@ku.edu.tr
 #$ -m bea
 
-julia NoMaskMemorization.jl Input.txt
+julia copyseq.jl Input.txt
 

@@ -7,8 +7,9 @@ def splitCharacter(text):
     newtext = ""
     for c in text:
         newtext = newtext + c + " "
-        newtext = newtext[:-1]
-        newtext = newtext + "\n"
+
+    newtext = newtext[:-1]
+    newtext = newtext + "\n"
     return newtext
 
 leng = int(args[1])
@@ -18,6 +19,7 @@ type = str(args[3])
 if type == "trn":                                                                         
     SpacedinputFile = open('SInTrn','w')                                                  
     SpacedOutputFile = open('SOutTrn', 'w')                                               
+
     inputFile = open('InTrn','w')                                                         
     outputFile = open('OutTrn','w')                                                       
 else:                                                                                     
@@ -31,24 +33,26 @@ min_number = math.pow(10, leng)
 
 max_len = int(size/100)
 for len in range(max_len):
-   # max_number = math.pow(10, leng + 1)                                    
-   # min_number = math.pow(10, leng)
+ #   max_number = math.pow(10, leng + 1)                                    
+  #  min_number = math.pow(10, leng)
     
     for i in range(100):                                                                    
         var = int(random.uniform(min_number, max_number))                                 
         inputFile.write(str(var)+"\n")   #input                                           
         ##inputFile.write(str(var) + str(var)+"\n") #doubled input                           
-        inputFile.write(str(var)[::-1]+"\n") # reversed input                             
+        #inputFile.write(str(var)[::-1]+"\n") # reversed input                             
         outputFile.write(str(var)+"\n") # output                                          
         ##outputFile.write(str(var)+"\n") # output                                          
-        outputFile.write(str(var)+"\n") # output                                          
-        SpacedinputFile.write(splitCharacter(str(var)))                                   
-        ##SpacedinputFile.write(splitCharacter(str(var)+str(var)))                          
-        SpacedinputFile.write(splitCharacter(str(var)[::-1]))
+       # outputFile.write(str(var)+"\n") # output                                          
+        SpacedOutputFile.write(splitCharacter(str(var)))                                   
+        SpacedinputFile.write(splitCharacter(str(var)))                          
+       # SpacedinputFile.write(splitCharacter(str(var)[::-1]))
  
  
-    if len%100 == 1:
+    if len%2 == 1:
         leng = leng + 1
 
 inputFile.close()
 SpacedinputFile.close()
+outputFile.close()
+SpacedOutputFile.close()

@@ -20,7 +20,7 @@ function main(args=ARGS)
         ("--gclip"; arg_type=Float64; default=5.0)
         ("--lr"; arg_type=Float64; default=0.5)
         ("--fbias"; arg_type=Float64; default=0.0)
-        ("--ftype"; default="Float64")
+        ("--ftype"; default="Float32")
         ("--winit"; default="Uniform(-0.08,0.08)")
         ("--dense"; action=:store_true)
         ("--fast"; help="skip norm and loss calculations."; action=:store_true)
@@ -52,6 +52,7 @@ function main(args=ARGS)
     println("epoch  secs    ptrain  ptest.. wnorm  gnorm")
     
     myoutputs = open("rnn.out","w")
+
     fileprint(a...)=(for x in a; @printf(myoutputs,"%-6g ",x); end; write(myoutputs,"\n"); flush(myoutputs))
     myprint(a...)=(for x in a; @printf("%-6g ",x); end; println();flush(STDOUT))
    
@@ -192,12 +193,11 @@ function s2s_loop_tst(m, loss; gcheck=false, o...)
         #mask = ones(Cuchar, batchsize)
         x = zeros(length(outDict),batchsize)
         ygold = zeros(length(outDict),batchsize)
-        
         copy!(x,dataXTST[batchNo][:,j,:])
         copy!(ygold,dataYTST[batchNo][:,j,:])
-
-
-       
+        println(ygold)
+          
+          
         # x,ygold,mask are cpu arrays; x gets copied to gpu by forw; we should do the other two here
         if ygold != nothing && gpu()
             #ygold = s2s_ygold = copytogpu(s2s_ygold,ygold)
@@ -248,9 +248,7 @@ function s2s_loop(m, loss; gcheck=false, o...)
         
         copy!(x,dataX[batchNo][:,j,:])
         copy!(ygold,dataY[batchNo][:,j,:])
-
-
-       
+                
         # x,ygold,mask are cpu arrays; x gets copied to gpu by forw; we should do the other two here
         if ygold != nothing && gpu()
             #ygold = s2s_ygold = copytogpu(s2s_ygold,ygold)
