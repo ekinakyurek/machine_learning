@@ -2,7 +2,13 @@ import sys
 import random
 import math
 args = sys.argv
-
+def splitCharacter(text):                                                                
+    newtext = ""                                                                              for c in text:                                                                        |
+newtext = newtext + c + " "                                                       |
+                        newtext = newtext[:-1]                                                            |
+                                newtext = newtext + "\n"                                                          |
+                                    return newtext                                                                        |
+                                                       
 leng = int(args[1])
 size = int(args[2])
 type = str(args[3])

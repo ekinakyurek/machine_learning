@@ -8,3 +8,6 @@ ERROR: LoadError: SystemError: opening file MemoTrn: No such file or directory
  in process_options at ./client.jl:280
  in _start at ./client.jl:378
 while loading /mnt/kufs/scratch/eakyurek13/machine_learning/finalProject/Memo/NoMaskMemorization.jl, in expression starting on line 368
+INFO: Learning to copy sequences to test the S2S model.
+INFO: Learning to copy sequences to test the S2S model.
+INFO: Learning to copy sequences to test the S2S model.
