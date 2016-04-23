@@ -39,8 +39,8 @@ function main(args=ARGS)
 
     global data = Any[]
 
-    push!(data, S2SData("SInTrn"; batchsize=batchsize, ftype=eval(parse(ftype)), dense=dense, dict=dict))
-    push!(data, S2SData("SInTst"; batchsize=batchsize, ftype=eval(parse(ftype)), dense=dense, dict=dict)) 
+    push!(data, S2SData("SInTrn", "SOutTrn"; batchsize=batchsize, ftype=eval(parse(ftype)), dense=dense, dict=dict))
+    push!(data, S2SData("SInTst", "SOutTst"; batchsize=batchsize, ftype=eval(parse(ftype)), dense=dense, dict=dict)) 
     
     vocab = maxtoken(data[1],2)
     
@@ -95,7 +95,7 @@ end
         tvec = wdot(h; out=vocab)
         return soft(tvec)
     end
-    end
+end
 # This copies lstm exactly for replicatability:
 @knet function copyseq3(word; fbias=0, vocab=0,numbers=47, nlayer=2, o...)
 
