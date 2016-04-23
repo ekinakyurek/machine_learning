@@ -15,12 +15,16 @@ leng = int(args[1])
 size = int(args[2])
 type = str(args[3])
 
-if type == "trn":
-    SpacedinputFile = open('SMemoTrn','w')
-    inputFile = open('MemoTrn','w')   
-else:
-    SpacedinputFile = open('SMemoTst','w')
-    inputFile = open('MemoTst','w') 
+if type == "trn":                                                                         
+    SpacedinputFile = open('SInTrn','w')                                                  
+    SpacedOutputFile = open('SOutTrn', 'w')                                               
+    inputFile = open('InTrn','w')                                                         
+    outputFile = open('OutTrn','w')                                                       
+else:                                                                                     
+    SpacedinputFile = open('SInTst','w')                                                  
+    SpacedOutputFile = open('SOutTst','w')                                                
+    inputFile = open('InTst','w')                                                         
+    outputFile = open('OutTst','w')  
 
 max_number = math.pow(10, leng + 1)
 min_number = math.pow(10, leng)
@@ -30,11 +34,16 @@ for len in range(max_len):
    # max_number = math.pow(10, leng + 1)                                    
    # min_number = math.pow(10, leng)
     
-    for i in range(100):   
-        var = int(random.uniform(min_number, max_number))
-        inputFile.write(str(var)+"\n")
-        inputFile.write(str(var)[::-1]+"\n") 
-        SpacedinputFile.write(splitCharacter(str(var)))
+    for i in range(100):                                                                    
+        var = int(random.uniform(min_number, max_number))                                 
+        inputFile.write(str(var)+"\n")   #input                                           
+        inputFile.write(str(var) + str(var)+"\n") #doubled input                           
+        inputFile.write(str(var)[::-1]+"\n") # reversed input                             
+        outputFile.write(str(var)+"\n") # output                                          
+        outputFile.write(str(var)+"\n") # output                                          
+        outputFile.write(str(var)+"\n") # output                                          
+        SpacedinputFile.write(splitCharacter(str(var)))                                   
+        SpacedinputFile.write(splitCharacter(str(var)+str(var)))                          
         SpacedinputFile.write(splitCharacter(str(var)[::-1]))
  
     if len%100 == 1:
