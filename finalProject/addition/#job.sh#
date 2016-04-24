@@ -12,4 +12,3 @@
 #$ -m bea
 
 julia copyseq.jl Input.txt
-

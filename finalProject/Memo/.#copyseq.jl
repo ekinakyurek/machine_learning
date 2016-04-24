@@ -1,1 +1,0 @@
-eakyurek13@parcore-6-0.local.39490:1458547178
