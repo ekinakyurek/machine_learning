@@ -39,9 +39,9 @@ function main(args=ARGS)
 
     global data = Any[]
 
-    push!(data, S2SData("SInTrn"; batchsize=batchsize, ftype=eval(parse(ftype)), dense=dense, dict=dict))
-    push!(data, S2SData("SInTst"; batchsize=batchsize, ftype=eval(parse(ftype)), dense=dense, dict=dict)) 
     
+    push!(data, S2SData("SOutTrn", "SOutTrn"; batchsize=batchsize, ftype=eval(parse(ftype)), dense=dense, dict=dict))
+    push!(data, S2SData("SOutTst", "SOutTst"; batchsize=batchsize, ftype=eval(parse(ftype)), dense=dense, dict=dict))
     vocab = maxtoken(data[1],2)
     
     
@@ -79,45 +79,61 @@ end
 # This copies lstm exactly for replicatability:
 @knet function copyseq(word; fbias=0, vocab=0,numbers=47, nlayer=2, o...)
 
-    t= copyseq2(word;fbias = fbias, vocab = vocab, numbers = numbers, nlayer=nlayer,o...)
-    x= tanh(t)
+        x=copyseq2(word;fbias=fbias, vocab=vocab, o...)
 
     if !decoding
-        input  = wbf2(x,h; o..., f=:sigm)
-        forget = wbf2(x,h; o..., f=:sigm, binit=Constant(fbias))
-        output = wbf2(x,h; o..., f=:sigm)
+      
+        input  = wbf3(x,h,cell; o..., f=:sigm)
+        forget = wbf3(x,h,cell; o..., f=:sigm, binit=Constant(fbias))
         newmem = wbf2(x,h; o..., f=:tanh)
+        tempcell = input .* newmem + cell .* forget
+        output =  wbf3(x,h,cell; o..., f=:sigm)
     else
-        input  = wbf2(x,h; o..., f=:sigm)
-        forget = wbf2(x,h; o..., f=:sigm, binit=Constant(fbias))
-        output = wbf2(x,h; o..., f=:sigm)
-        newmem = wbf2(x,h; o..., f=:tanh)
+    
+        input  = wbf3(x,h,cell; o..., f=:sigm)
+        forget = wbf3(x,h,cell; o..., f=:sigm, binit=Constant(fbias))
+	newmem = wbf2(x,h; o..., f=:tanh)
+        tempcell = input .* newmem + cell .* forget
+        output =  wbf3(x,h,cell; o..., f=:sigm)
     end
-    cell = input .* newmem + cell .* forget
-    h  = tanh(cell) .* output
+    cell = tempcell
+    h  = tanh(cell).* output
+
     if decoding
-        tvec = wdot(h; out=numbers)
+        tvec = wdot(h; out=vocab)
         return soft(tvec)
     end
 end
 
-@knet function copyseq2(word; fbias=0, vocab=0,numbers=47, nlayer=2, o...)
+@knet function copyseq2(word; fbias=0, vocab=0,numbers=47,nlayer=2, o...)
     if !decoding
         x = wdot(word; o...)
-        input  = wbf2(x,h; o..., f=:sigm)
-        forget = wbf2(x,h; o..., f=:sigm, binit=Constant(fbias))
-        output = wbf2(x,h; o..., f=:sigm)
+        input  = wbf3(x,h,cell; o..., f=:sigm)
+        forget = wbf3(x,h,cell; o..., f=:sigm, binit=Constant(fbias))
         newmem = wbf2(x,h; o..., f=:tanh)
+        tempcell = input .* newmem + cell .* forget
+        output =  wbf3(x,h,cell; o..., f=:sigm)
     else
         x = wdot(word; o...)
-        input  = wbf2(x,h; o..., f=:sigm)
-        forget = wbf2(x,h; o..., f=:sigm, binit=Constant(fbias))
-        output = wbf2(x,h; o..., f=:sigm)
+        input  = wbf3(x,h,cell; o..., f=:sigm)
+        forget = wbf3(x,h,cell; o..., f=:sigm, binit=Constant(fbias))
         newmem = wbf2(x,h; o..., f=:tanh)
+        tempcell = input .* newmem + cell .* forget
+        output =  wbf3(x,h,cell; o..., f=:sigm)
     end
-    cell = input .* newmem + cell .* forget
+    cell = tempcell
     h  = tanh(cell) .* output
     return h
+end
+
+@knet function wbf3(x1, x2, x3; f=:sigm, o...)
+    y1 = wdot(x1; o...)
+    y2 = wdot(x2; o...)
+    y3 = wdot(x3; o...)
+    x3 = add(y2,y1)
+    x4 = add(x3,y3)
+    y4 = bias(x4; o...)
+    return f(y4; o...)
 end
 
 @knet function copyseq1(word; fbias=0, vocab=0, o...)
