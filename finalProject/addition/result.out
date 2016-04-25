@@ -1,5 +1,0 @@
-Dict{AbstractString,Any}("hidden"=>400,"lr"=>0.5,"dense"=>false,"dictfile"=>nothing,"batchsize"=>100,"winit"=>"Uniform(-0.08,0.08)","fast"=>false,"gclip"=>5.0,"gcheck"=>0,"fbias"=>0.0,"nosharing"=>false,"epochs"=>100,"ftype"=>"Float32","lossreport"=>0,"seed"=>42,"datafiles"=>Any["Input.txt"])
-epoch  secs    ptrain  ptest.. wnorm  gnorm
-1      445.493 8.79922 0.846828 858.462 30.331 
-2      893.297 7.48403 0.680167 867.957 127.525 
-3      1338.75 6.81021 0.671839 873.945 235.204 
