@@ -17,11 +17,11 @@ function main(args=ARGS)
         ("--hidden"; arg_type=Int; default=400)
         ("--batchsize"; arg_type=Int; default=100)
         ("--lossreport"; arg_type=Int; default=0)
-        ("--gclip"; arg_type=Float64; default=5.0)
-        ("--lr"; arg_type=Float64; default=0.5)
+        ("--gclip"; arg_type=Float64; default=10.0)
+        ("--lr"; arg_type=Float64; default=0.6)
         ("--fbias"; arg_type=Float64; default=0.0)
         ("--ftype"; default="Float32")
-        ("--winit"; default="Uniform(-0.08,0.08)")
+        ("--winit"; default="Uniform(-0.1,0.1)")
         ("--dense"; action=:store_true)
         ("--fast"; help="skip norm and loss calculations."; action=:store_true)
         ("--gcheck"; arg_type=Int; default=0)
@@ -42,11 +42,13 @@ function main(args=ARGS)
     
     push!(data, S2SData("SInTrn", "SOutTrn"; batchsize=batchsize, ftype=eval(parse(ftype)), dense=dense, dict=dict))
     push!(data, S2SData("SInTst", "SOutTst"; batchsize=batchsize, ftype=eval(parse(ftype)), dense=dense, dict=dict))
+  
     vocab = maxtoken(data[1],2)
     
     
     global model = compile(:copyseq; fbias=fbias, out=hidden,numbers=vocab, nlayer = 2, out=hidden, vocab=vocab, winit=eval(parse(winit)))
-    setp(model; lr=lr)
+    setp(model; lr=lr, dropout=true)
+    
     if nosharing
         set!(model, :forwoverwrite, false)
         set!(model, :backoverwrite, false)
@@ -59,6 +61,7 @@ function main(args=ARGS)
     println("epoch  secs    ptrain  ptest.. wnorm  gnorm")
     myprint(a...)=(for x in a; @printf("%-6g ",x); end; println(); flush(STDOUT))
     for epoch=1:epochs
+        myprint(epoch, (time_ns()-t0)/1e9, perp..., (fast ? [] : maxnorm)...)
         fast || (fill!(maxnorm,0); fill!(losscnt,0))
         train(model, data[1], softloss; gclip=gclip, maxnorm=maxnorm, losscnt=losscnt, lossreport=lossreport)
         fast || (perp[1] = exp(losscnt[1]/losscnt[2]))
@@ -79,7 +82,7 @@ end
 # This copies lstm exactly for replicatability:
 @knet function copyseq(word; fbias=0, vocab=0,numbers=47, nlayer=2, o...)
 
-        x=copyseq2(word;fbias=fbias, vocab=vocab, o...)
+        x=copyseq1(word;fbias=fbias, vocab=vocab, o...)
 
     if !decoding
       
@@ -92,20 +95,19 @@ end
     
         input  = wbf3(x,h,cell; o..., f=:sigm)
         forget = wbf3(x,h,cell; o..., f=:sigm, binit=Constant(fbias))
-	newmem = wbf2(x,h; o..., f=:tanh)
+	    newmem = wbf2(x,h; o..., f=:tanh)
         tempcell = input .* newmem + cell .* forget
         output =  wbf3(x,h,cell; o..., f=:sigm)
     end
     cell = tempcell
     h  = tanh(cell).* output
-
     if decoding
         tvec = wdot(h; out=vocab)
         return soft(tvec)
     end
 end
 
-@knet function copyseq2(word; fbias=0, vocab=0,numbers=47,nlayer=2, o...)
+@knet function copyseq1(word; fbias=0, vocab=0,numbers=47,nlayer=2, o...)
     if !decoding
         x = wdot(word; o...)
         input  = wbf3(x,h,cell; o..., f=:sigm)
@@ -134,36 +136,6 @@ end
     x4 = add(x3,y3)
     y4 = bias(x4; o...)
     return f(y4; o...)
-end
-
-@knet function copyseq1(word; fbias=0, vocab=0, o...)
-    if decoding
-        x = wdot(word; o...)
-        input  = sigm(aff2(x,h; o...))
-        forget = sigm(aff2(x,h; o..., binit=Constant(fbias)))
-        output = sigm(aff2(x,h; o...))
-        newmem = tanh(aff2(x,h; o...))
-    else
-        x = wdot(word; o...)
-        input  = sigm(aff2(x,h; o...))
-        forget = sigm(aff2(x,h; o..., binit=Constant(fbias)))
-        output = sigm(aff2(x,h; o...))
-        newmem = tanh(aff2(x,h; o...))
-    end
-    c = input .* newmem + c .* forget
-    h  = tanh(c) .* output
-    if decoding
-        return soft(wdot(h; out=vocab))
-    end
-end
-
-@knet function aff2(x,y; out=0, o...)
-    a = par(; o..., dims=(out,0))
-    b = par(; o..., dims=(out,0))
-    c = par(; o..., dims=(0,))
-    # return a*x+b*y+c
-    xy = a*x+b*y
-    return c+xy
 end
 
 function train(m, data, loss; o...)
