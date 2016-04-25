@@ -90,7 +90,7 @@ for len in range(int(size/200)):
          #   SpacedOutputFile.write(splitCharacter(str(var1+var2)))   #output
     
     
-        if len%200== 1:
+        if len%250== 1:
             leng = leng + 1
     else:         
         for i in range(100):

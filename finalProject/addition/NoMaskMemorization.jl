@@ -14,7 +14,7 @@ function main(args=ARGS)
         ("datafiles"; nargs='+'; required=false; help="First file used for training")
         ("--dictfile"; help="Dictionary file, first datafile used if not specified")
         ("--epochs"; arg_type=Int; default=100)
-        ("--hidden"; arg_type=Int; default=650)
+        ("--hidden"; arg_type=Int; default=400)
         ("--batchsize"; arg_type=Int; default=100)
         ("--lossreport"; arg_type=Int; default=0)
         ("--gclip"; arg_type=Float64; default=5.0)
@@ -35,9 +35,9 @@ function main(args=ARGS)
     seed > 0 && setseed(seed)
  
     dict = (dictfile == nothing ? datafiles[1] : dictfile)
-    readData("OutTrn", "OutTrn", "NDict", "NDict"; trn=true)
-    readData("OutTst", "OutTst", "NDict", "NDict")
-    global model = compile(:copyseq; fbias=fbias, numbers=length(outDict), nlayer = 2, out=hidden, winit=eval(parse(winit)))
+    readData("InTrn", "OutTrn", "NDict", "NDict"; trn=true)
+    readData("InTst", "OutTst", "NDict", "NDict")
+    global model = compile(:copyseq; fbias=fbias, numbers=length(outDict), out=hidden,vocab =length(outDict), winit=eval(parse(winit)))
     setp(model; lr=lr)
 
     #
@@ -76,78 +76,64 @@ function main(args=ARGS)
 end
 
 
+# This copies lstm exactly for replicatability:
+@knet function copyseq(word; fbias=0, vocab=0,numbers=47, nlayer=2, o...)
 
-@knet function rnn_model(character; fbias=0, numbers=47, nlayer=2, o... )
+        x=copyseq2(word;fbias=fbias, vocab=vocab, o...)
+
     if !decoding
-        h = lstm2(character; nlayer=nlayer,o...)
+      
+        input  = wbf3(x,h,cell; o..., f=:sigm)
+        forget = wbf3(x,h,cell; o..., f=:sigm, binit=Constant(fbias))
+        newmem = wbf2(x,h; o..., f=:tanh)
+        tempcell = input .* newmem + cell .* forget
+        output =  wbf3(x,h,cell; o..., f=:sigm)
     else
-        h = lstm2(character; nlayer=nlayer,o...)
+    
+        input  = wbf3(x,h,cell; o..., f=:sigm)
+        forget = wbf3(x,h,cell; o..., f=:sigm, binit=Constant(fbias))
+	    newmem = wbf2(x,h; o..., f=:tanh)
+        tempcell = input .* newmem + cell .* forget
+        output =  wbf3(x,h,cell; o..., f=:sigm)
     end
+    cell = tempcell
+    h  = tanh(cell).* output
 
     if decoding
-        target = wdot(h; out=numbers)
-        return soft(target)
+        tvec = wdot(h; out=vocab)
+        return soft(tvec)
     end
 end
 
-@knet function copyseq(word; fbias=0, vocab=0,numbers=47, nlayer=2, o...)
-       
-       t= copyseq2(word;fbias = fbias, vocab = vocab, numbers = numbers, nlayer=nlayer,o...)
-       x= tanh(t)
-      
-  if !decoding
-      input  = wbf2(x,h; o..., f=:sigm)
-      forget = wbf2(x,h; o..., f=:sigm, binit=Constant(fbias))
-      output = wbf2(x,h; o..., f=:sigm)
-      newmem = wbf2(x,h; o..., f=:tanh)
-  else
-      input  = wbf2(x,h; o..., f=:sigm)
-      forget = wbf2(x,h; o..., f=:sigm, binit=Constant(fbias))
-      output = wbf2(x,h; o..., f=:sigm)
-      newmem = wbf2(x,h; o..., f=:tanh)
-  end
-  cell = input .* newmem + cell .* forget
-  h  = tanh(cell) .* output
-  if decoding
-      tvec = wdot(h; out=numbers)
-      return soft(tvec)
-  end
-end
-
-@knet function copyseq2(word; fbias=0, vocab=0,numbers=47, nlayer=2, o...)
-  if !decoding
-      x = wdot(word; o...)
-      input  = wbf2(x,h; o..., f=:sigm)
-      forget = wbf2(x,h; o..., f=:sigm, binit=Constant(fbias))
-      output = wbf2(x,h; o..., f=:sigm)
-      newmem = wbf2(x,h; o..., f=:tanh)
-  else
-      x = wdot(word; o...)
-      input  = wbf2(x,h; o..., f=:sigm)
-      forget = wbf2(x,h; o..., f=:sigm, binit=Constant(fbias))
-      output = wbf2(x,h; o..., f=:sigm)
-      newmem = wbf2(x,h; o..., f=:tanh)
-  end
-  cell = input .* newmem + cell .* forget
-  h  = tanh(cell) .* output
- return h
-end
-
-
-@knet function lstm2(x; nlayer=2, embedding=0, hidden=400, o...)
-    a = wdot(x; out=hidden, o...)
-    c = repeat(a; frepeat=:firstLayer, nrepeat=nlayer, o...)
-    return c
-end
-
-@knet function firstLayer(x; fbias= 0.08, o...)
-    input  = wbf3(x,h,cell; o..., f=:sigm, binit=Uniform(-fbias,fbias))
-    forget = wbf3(x,h,cell; o..., f=:sigm, binit=Uniform(-fbias,fbias))
-    newmem = wbf2(x,h; o..., f=:tanh, binit=Uniform(-fbias,fbias))
-    cell = input .* newmem + cell .* forget
-    output = wbf3(x,h,cell; o..., f=:sigm, binit=Uniform(-fbias,fbias))
+@knet function copyseq2(word; fbias=0, vocab=0,numbers=47,nlayer=2, o...)
+    if !decoding
+        x = wdot(word; o...)
+        input  = wbf3(x,h,cell; o..., f=:sigm)
+        forget = wbf3(x,h,cell; o..., f=:sigm, binit=Constant(fbias))
+        newmem = wbf2(x,h; o..., f=:tanh)
+        tempcell = input .* newmem + cell .* forget
+        output =  wbf3(x,h,cell; o..., f=:sigm)
+    else
+        x = wdot(word; o...)
+        input  = wbf3(x,h,cell; o..., f=:sigm)
+        forget = wbf3(x,h,cell; o..., f=:sigm, binit=Constant(fbias))
+        newmem = wbf2(x,h; o..., f=:tanh)
+        tempcell = input .* newmem + cell .* forget
+        output =  wbf3(x,h,cell; o..., f=:sigm)
+    end
+    cell = tempcell
     h  = tanh(cell) .* output
     return h
+end
+
+@knet function wbf3(x1, x2, x3; f=:sigm, o...)
+    y1 = wdot(x1; o...)
+    y2 = wdot(x2; o...)
+    y3 = wdot(x3; o...)
+    x3 = add(y2,y1)
+    x4 = add(x3,y3)
+    y4 = bias(x4; o...)
+    return f(y4; o...)
 end
 
 @knet function wbf3(x1, x2, x3; f=:sigm, o...)

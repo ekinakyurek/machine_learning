@@ -78,11 +78,11 @@ function readData(input,output,inputDict,outputDict; batchsize = 100, dataSize=1
      else
         a = zeros(length(inDict))
         a[inDict[outputStr[y][max_output]]] = 1
-        inBatch[:,max_input+1+max_output,y] = outputStr[y][max_output]
+        inBatch[:,max_input+1+max_output,y] = a
      end
 
-    inBatch[:,max_input+1+max_output+1,y] = inputEndMark
-    outBatch[:,max_input+1+max_output+1,y] = zeros(length(outDict))
+      inBatch[:,max_input+1+max_output+1,y] = inputEndMark
+      outBatch[:,max_input+1+max_output+1,y] = zeros(length(outDict))
   end
   if trn 
     push!(dataX,inBatch)
