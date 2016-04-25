@@ -21,11 +21,14 @@ function readData(input,output,inputDict,outputDict; batchsize = 100, dataSize=1
   for i = 1:floor(dataSize/batchsize)
    inputStr = []
    outputStr = []
-   for j=1:batchsize
+   
+    for j=1:batchsize
+         
     push!(inputStr,rstrip(readline(infile)))
-    push!(outputStr,rstrip(readline(outfile)))
-   end
 
+    push!(outputStr,rstrip(readline(outfile)))
+#    println((i,j,outputStr[j]))
+    end
    max_input = findMax(inputStr)
    max_output = findMax(outputStr)
 
@@ -45,7 +48,7 @@ function readData(input,output,inputDict,outputDict; batchsize = 100, dataSize=1
       end
     end
    end
-
+    
    for y=1:batchsize
     inBatch[:,max_input+1,y] = inputEndMark
     a = zeros(length(outDict))

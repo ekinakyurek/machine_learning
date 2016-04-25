@@ -35,8 +35,8 @@ function main(args=ARGS)
     seed > 0 && setseed(seed)
  
     dict = (dictfile == nothing ? datafiles[1] : dictfile)
-    readData("InTrn", "OutTrn", "NDict", "NDict"; trn=true)
-    readData("InTst", "OutTst", "NDict", "NDict")
+    readData("InTrn", "OutTrn", "NDict", "NDict"; trn=true, dataSize = 500000)
+    readData("InTst", "OutTst", "NDict", "NDict"; dataSize=5000)
     global model = compile(:copyseq; fbias=fbias, numbers=length(outDict), out=hidden,vocab =length(outDict), winit=eval(parse(winit)))
     setp(model; lr=lr)
 
@@ -221,7 +221,8 @@ function s2s_loop(m, loss; gcheck=false, o...)
     s2s_lossreport()
     decoding = false
     reset!(m)
-   
+    i=0
+    println(length(dataX))
     for batchNo = 1:length(dataX)
     
       nwords = batchsize
@@ -243,7 +244,8 @@ function s2s_loop(m, loss; gcheck=false, o...)
             #mask != nothing && (mask = s2s_mask  = copytogpu(s2s_mask,mask)) # mask not used when ygold=nothing
         end
         if decoding && ygold ==  zeros(length(outDict),batchsize) # the next sentence started
-          
+       #     i=i+1
+        #    println(i)
             gcheck && break
             s2s_eos(m, loss; gcheck=gcheck, o...)
             reset!(m)
