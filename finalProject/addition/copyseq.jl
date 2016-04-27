@@ -86,18 +86,18 @@ end
 
     if !decoding
       
-        input  = wbf3(x,h,cell; o..., f=:sigm)
+        input  = wbf3(x,h,cell; o..., f=:sigm, binit=Constant(fbias))
         forget = wbf3(x,h,cell; o..., f=:sigm, binit=Constant(fbias))
-        newmem = wbf2(x,h; o..., f=:tanh)
+        newmem = wbf2(x,h; o..., f=:tanh, binit=Constant(fbias))
         tempcell = input .* newmem + cell .* forget
         output =  wbf3(x,h,cell; o..., f=:sigm)
     else
     
-        input  = wbf3(x,h,cell; o..., f=:sigm)
+        input  = wbf3(x,h,cell; o..., f=:sigm, binit=Constant(fbias))
         forget = wbf3(x,h,cell; o..., f=:sigm, binit=Constant(fbias))
-	    newmem = wbf2(x,h; o..., f=:tanh)
+	    newmem = wbf2(x,h; o..., f=:tanh, binit=Constant(fbias))
         tempcell = input .* newmem + cell .* forget
-        output =  wbf3(x,h,cell; o..., f=:sigm)
+        output =  wbf3(x,h,cell; o..., f=:sigm, binit=Constant(fbias))
     end
     cell = tempcell
     h  = tanh(cell).* output
@@ -110,18 +110,18 @@ end
 @knet function copyseq1(word; fbias=0, vocab=0,numbers=47,nlayer=2, o...)
     if !decoding
         x = wdot(word; o...)
-        input  = wbf3(x,h,cell; o..., f=:sigm)
+        input  = wbf3(x,h,cell; o..., f=:sigm, binit=Constant(fbias))
         forget = wbf3(x,h,cell; o..., f=:sigm, binit=Constant(fbias))
-        newmem = wbf2(x,h; o..., f=:tanh)
+        newmem = wbf2(x,h; o..., f=:tanh, binit=Constant(fbias))
         tempcell = input .* newmem + cell .* forget
-        output =  wbf3(x,h,cell; o..., f=:sigm)
+        output =  wbf3(x,h,cell; o..., f=:sigm, binit=Constant(fbias))
     else
         x = wdot(word; o...)
-        input  = wbf3(x,h,cell; o..., f=:sigm)
+        input  = wbf3(x,h,cell; o..., f=:sigm, binit=Constant(fbias))
         forget = wbf3(x,h,cell; o..., f=:sigm, binit=Constant(fbias))
-        newmem = wbf2(x,h; o..., f=:tanh)
+        newmem = wbf2(x,h; o..., f=:tanh, binit=Constant(fbias))
         tempcell = input .* newmem + cell .* forget
-        output =  wbf3(x,h,cell; o..., f=:sigm)
+        output =  wbf3(x,h,cell; o..., f=:sigm, binit=Constant(fbias))
     end
     cell = tempcell
     h  = tanh(cell) .* output
