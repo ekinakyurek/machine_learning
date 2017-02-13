@@ -13,9 +13,9 @@
 
 module SymbolsManager
 
-symbol2idx= Dict{Any,Int}()
-idx2symbol =  Dict{Int,Any}()
-vocab_size = 0
+global symbol2idx= Dict{Any,Int}()
+global idx2symbol =  Dict{Int,Any}()
+global vocab_size = 0
 
 function get_symbol_idx(c)
   if haskey(dict, c)

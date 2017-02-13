@@ -12,8 +12,9 @@
 #]]--
 
 module variablesManager
-vars = [];
-last_var_idx = 0
+
+global vars = []
+global last_var_idx = 0
 
 
 function get_unused_variables(number)

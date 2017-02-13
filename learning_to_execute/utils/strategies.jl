@@ -11,10 +11,13 @@
 #  limitations under the License.
 #]]--
 
+
+
 function make_harder()
 
   state_train.seed = state_train.seed + 1
   state_val.seed = state_val.seed + 1
+  
   if params.current_length < params.target_length
     params.current_length = params.current_length + 1
     return true

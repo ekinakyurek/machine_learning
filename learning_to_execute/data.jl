@@ -122,7 +122,7 @@ end
 
 function get_operand(hardness)
   if size(stack,1) == 0
-    eval = rand(10^(hardness-1):10^hardness)
+    eval = rand(10^(hardness[1]-1):10^hardness[1])
     expr = @sprintf("%d", eval)
     return expr, eval
   else
@@ -214,13 +214,13 @@ function get_operands(hardness, nr)
 end
 
 function hardness_fun()
-  return 8, 4
+  return (8, 4)
 end
 
 
   print("Data verification")
   for k  in 1:1000
-    code, var, output = compose(hardness_fun)
+    code, var, output = compose(hardness_fun())
     
     output = @sprintf("%d", output)
     print("\n__________________\n")

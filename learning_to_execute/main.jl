@@ -15,54 +15,6 @@
 include "data.jl"
 include "utils/strategies.jl"
 
-type MyData
-        x::Array{Float64,2}
-        y::Array{Float64,2} 
-end
-
-type Operand
-        expr::AbstractString
-        eval::Int    
-end
-
-MyData()=MyData(zeros(1,1),zeros(1,1)) 
-type State
-         currently_loaded_seed::Int
-         seed::Int
-         len::Int
-         kind::Int
-         name::AbstractString
-         data::MyData
-         pos::Float64
-         acc::Float64
-         count::Int
-         normal::Float64
-         
-end
-State()=State(0,0,0,0,"",MyData())
-type Params
-         current_length::Int
-         target_length::Int
-         seq_length::Int
-         layers::Int
-         batch_size::Int
-         rnn_size::Int
-end
-Params()=Params(0,0,0,0,0,0)
-
-global params =Params()
-
-#first paramater of hardness is length of digits
-#second paramater of hardness is the nesting number of operations
-global hardness = (0,0)
-
-global stack = [];
-
-global state_train =State()
-global state_val =State()
-global state_test =State()
-
-
 
 function lstm(i, prev_c, prev_h)
   function new_input_sum()
